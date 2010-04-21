@@ -79,5 +79,10 @@ namespace PokeIn.Comet
                 PokeIn.AddEvent(_item, '" + EventName + @"', document.__" + SimpleName + @");
             }"+"\nc3eb();\n");
         }
+
+        public static string SafeParameter(string message)
+        {
+            return message.Replace("'", "\\\\\'").Replace("\"", "\\\\\"");
+        }
     }
 }

@@ -37,7 +37,7 @@ namespace PokeIn.Comet
             set { clientTimeout = value; }
             get { return clientTimeout; }
         }
-        static int connectionLostTimeout = 60000; //60 secs
+        static int connectionLostTimeout = 45000; //45 secs
         public static int ConnectionLostTimeout
         {
             set { connectionLostTimeout = value; }

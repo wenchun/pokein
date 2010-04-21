@@ -87,9 +87,9 @@ namespace PokeIn
                     sm.parameterTypes.Add(param.ParameterType);
                     string paramName = "a"+(indexer).ToString();
                     letterz += paramName;
-                    if (param.GetType() == typeof(System.String) || param.GetType() == typeof(string))
+                    if (param.ParameterType == typeof(System.String))
                     {
-                        stringList.Add(paramName+"="+paramName+".replace('\"','\\\\\"');");
+                        stringList.Add(paramName + "=PokeIn.StrFix(" + paramName + ");");
                     }
                     letterList.Add(paramName);
 
@@ -97,7 +97,10 @@ namespace PokeIn
                     indexer++;
                 }
 
-                json += letterz + "){PokeIn.Send(PokeIn.GetClientId() + \"." + completeName + "(";
+                json += letterz + "){";
+                foreach (string str in stringList)
+                    json += str;
+                json += "PokeIn.Send(PokeIn.GetClientId() + \"." + completeName + "(";
                 is_first = true;
                 foreach (string strLetter in letterList)
                 {

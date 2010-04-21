@@ -54,7 +54,7 @@ namespace PokeIn.Comet
             lock(Messages)
             { 
                 foreach (string m in Messages)
-                    message += m; 
+                    message += m+";"; 
                 Messages.Clear(); 
             } 
         } 

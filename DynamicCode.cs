@@ -115,44 +115,15 @@ namespace PokeIn
                 return null;
 
             //parameter definition
-            string param = code.Substring(lp_pos + 1, rp_pos - (lp_pos + 1));
-            List<object> parameterList = new List<object>();
-
-            string sub_p = param.Trim();
-            if (sub_p.StartsWith("\""))
-            {
-                if (!sub_p.EndsWith("\""))
-                {
-                    return null;
-                }
-                if (sub_p.Length > 2)
-                {
-                    parameterList.Add(sub_p.Substring(1, sub_p.Length - 2));
-                }
-                else
-                {
-                    parameterList.Add("");
-                }
-            }
-            if (sub_p.StartsWith("'") && sub_p.EndsWith("'"))
-            {
-                if (sub_p.Length > 2)
-                {
-                    parameterList.Add(sub_p.ToCharArray()[1]);
-                }
-                else
-                {
-                    parameterList.Add("");
-                }
-            }
+            string param = code.Substring(lp_pos + 1, rp_pos - (lp_pos + 1)); 
 
             SubMember func = null;
             Definitions.classMembers.TryGetValue(names[names.Length-2] + "." + names[names.Length-1], out func);
 
-            if (parameterList.Count == 0)
-            {
-                parameterList.Add(Convert.ChangeType(sub_p, func.parameterTypes[0]));
-            }
+            string sub_p = param.Trim();
+
+            List<object> parameterList = new List<object>();
+            parameterList.Add(Convert.ChangeType(sub_p, func.parameterTypes[0]));
 
             return new object[] { names, parameterList };   
         }

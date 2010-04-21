@@ -10,6 +10,12 @@ PokeIn.ListenUrl = '[$$ListenUrl$$]';
 PokeIn.SendUrl = '[$$SendUrl$$]';
 PokeIn.ListenCounter = new Date().getTime();
 PokeIn.IsConnected = true;
+PokeIn.isMozilla = /Firefox/i.test(navigator.userAgent);
+PokeIn.isIE = /MSIE/i.test(navigator.userAgent);
+PokeIn.isOpera = /Opera/i.test(navigator.userAgent);
+PokeIn.isSafari = /Safari/i.test(navigator.userAgent);
+
+PokeIn.ForcePokeInAjax = false;
 
 PokeIn.SetText = function(e, t) {
     if (e.innerText != null) {
@@ -95,10 +101,10 @@ PokeIn.RepHelper = function(s1, s2, s3) {
     return s1;
 }
 
-PokeIn.CreateText = function(mess, _in) {
+PokeIn.CreateText = function (mess, _in) {
     var len = PokeIn.clid.length - 1;
     var clide = PokeIn.clid.substr(1, len);
-    var lst = ['.', '(', ')', '{', '}' ];
+    var lst = ['.', '(', ')', '{', '}'];
     if (_in) {
         for (var i = 0; i < 5; i++) {
             mess = PokeIn.RepHelper(mess, ":" + clide + i.toString() + ":", lst[i]);
@@ -109,7 +115,18 @@ PokeIn.CreateText = function(mess, _in) {
             mess = PokeIn.RepHelper(mess, lst[i], ":" + clide + i.toString() + ":");
         }
     }
-    return mess;
+    if (_in && PokeIn.ForcePokeInAjax) {
+        try { eval(mess); } catch (e) { }
+    }
+    else return mess;
+}
+
+PokeIn.StrFix = function (str) {
+    str = str.replace(/[&]/g, '&quot;');
+    str = str.replace(/[\\]/g, '&#92;');
+    str = str.replace(/["]/g, '\\"');
+    str = '"' + str + '"';
+    return str;
 }
 
 PokeIn.Send = function(mess) {
@@ -142,11 +159,7 @@ PokeIn.Start = function() {
             self.location = self.location + conn_str + "rt=" + PokeIn.ListenCounter;
             return;
         }
-        PokeIn.Started = true;
-        PokeIn.AddEvent(window, "unload",
-            function() {
-                PokeIn.Close();
-            });
+        PokeIn.Started = true; 
 
         PokeIn.Listen();
     }, 10);
@@ -174,25 +187,29 @@ PokeIn.HttpRequest.prototype.open = function(_method, _url, _async) {
     this.async = _async;
 }
 
-PokeIn.HttpRequest.prototype.send = function(_parameters) {
+PokeIn.HttpRequest.prototype.send = function (_parameters) {
     this.parameters = _parameters;
     this._element = document.createElement("script");
     this._element.defer = true;
     this._element.id = "s" + this.id;
     var _this = this;
-    this._element.onload = function(ev) {
+    this._element.onload = function (ev) {
         if (_this.onreadystatechange != null) {
             _this.readystate = 4;
             _this.status = 200;
+            _this.responseText = "";
             _this.onreadystatechange();
             delete _this._element.parentNode.removeChild(_this._element);
         }
     }
-    this._element.src = this.url + "?" + _parameters;
+    this._element.src = this.url + "?ij=1&" + _parameters;
     document.getElementsByTagName("head")[0].appendChild(this._element);
 }
 
-PokeIn.CreateAjax = function(id) { 
+PokeIn.CreateAjax = function (id) {
+    if (PokeIn.ForcePokeInAjax) {
+        return new PokeIn.HttpRequest(id);
+    }
     var xmlHttp = null;
     try {
         xmlHttp = new XMLHttpRequest();
@@ -212,11 +229,11 @@ PokeIn.CreateAjax = function(id) {
     }
     return xmlHttp;
 }
-PokeIn._Send = function(call_id) {
+PokeIn._Send = function (call_id) {
     var txt = [];
     txt.push('c=' + PokeIn.GetClientId());
     var _url = PokeIn.SendUrl;
-    if (PokeIn.RequestList[call_id].is_send) { 
+    if (PokeIn.RequestList[call_id].is_send) {
         txt.push('ms=' + PokeIn.RequestList[call_id].message);
     }
     else {
@@ -230,11 +247,13 @@ PokeIn._Send = function(call_id) {
     xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
     xmlHttp.setRequestHeader('If-Modified-Since', 'Thu, 6 Mar 1980 00:00:00 GMT');
     xmlHttp.setRequestHeader('Connection', 'close');
-    xmlHttp.onreadystatechange = function() {
+    xmlHttp.onreadystatechange = function () {
         if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
             PokeIn.RequestList[call_id].status = false;
             try {
-                eval(PokeIn.CreateText(xmlHttp.responseText, true));
+                if (xmlHttp.responseText != "") {
+                    eval(PokeIn.CreateText(xmlHttp.responseText, true));
+                }
             }
             catch (e) {
                 if (PokeIn.OnError != null) {

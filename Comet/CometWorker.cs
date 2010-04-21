@@ -83,7 +83,7 @@ namespace PokeIn.Comet
 
             if (!anyAdd)
             {
-                page.Response.Write("<script>alert('EvaluateSettings class is empty');</script>");
+                page.Response.Write("<script>alert('There is no server side class!');</script>");
                 return false;
             }
 
@@ -116,7 +116,13 @@ namespace PokeIn.Comet
         {
             int roundCounter = 1;
             int totalWait = 0;
-            while (true)
+            bool hasClient = false;
+            lock (ClientStatus)
+            {
+                hasClient = ClientStatus.ContainsKey(ClientId);
+            }
+
+            while (hasClient)
             {
                 int record_count = 0;
                 lock (CodesToRun)
@@ -125,19 +131,19 @@ namespace PokeIn.Comet
                 }
                 if (record_count == 0)
                 {
-                    int _timer = 30 + ( (roundCounter / 1000) * 50 );
+                    int _timer = 30 + ((roundCounter / 100) * 15);
                     totalWait += _timer;
                     System.Threading.Thread.Sleep(_timer);
                     roundCounter++;
 
                     if (totalWait > CometSettings.ClientTimeout)
                     {
-                        SendToClient(ClientId, "PokeIn.Closed(;)");
+                        SendToClient(ClientId, "PokeIn.Closed();");
                         break;
                     }
-                    if (roundCounter % 1000 == 0)
+                    if (roundCounter % 60 == 0)
                     {
-                        bool hasClient = false;
+                        hasClient = false;
                         lock (ClientStatus)
                         {
                             hasClient = ClientStatus.ContainsKey(ClientId);
@@ -173,19 +179,20 @@ namespace PokeIn.Comet
                         }
                         CodesToRun.Clear();
                     }
-                    if (code.Length>0)
+                    if (code.Length > 0)
                     {
                         if (!Code.Run(code))
                         {
-                            SendToClient(ClientId, "PokeIn.CompilerError('" + CometWorker.Code.ErrorMessage + " :: " + code + "');");
+                            SendToClient(ClientId, "PokeIn.CompilerError('" + CometWorker.Code.ErrorMessage + " :: " + code.Replace("'", " ").Replace("\"", " ") + "');");
                         }
                     }
                 }
             }
+            
 
             try
             {
-                if (totalWait > CometSettings.ClientTimeout)
+                if (totalWait > CometSettings.ClientTimeout || !hasClient)
                     RemoveClient(ClientId);
             }
             catch (System.Exception)
@@ -224,12 +231,26 @@ namespace PokeIn.Comet
             
             string message = page.Request.Params["ms"];
 
+            if (message == null)
+            {
+                return;
+            }
+
             if (message.Trim().Length == 0)
             {
                 return;
             }
 
-            message = CreateText(clientId, message, true);
+            bool ijStatus = false;
+            try
+            {
+                int n_status = Convert.ToInt16(page.Request.Params["ij"]);
+                bool status = Convert.ToBoolean(n_status);
+                ijStatus = status;
+            }
+            catch (Exception) { }
+
+            message = CreateText(clientId, message.Replace("&quot;","&").Replace("&#92;","\\"), true);
 
             if (CometSettings.LogClientScripts)
             {
@@ -244,26 +265,17 @@ namespace PokeIn.Comet
                 {
                     ClientScriptsLog[clientId].Add(message);
                 }
-            }
+            } 
 
-            bool hasClient = false;
-            lock (ClientStatus)
-            {
-                hasClient = ClientStatus.ContainsKey(clientId);
-            }
-
-            if (hasClient)
-            {
-                lock (ClientStatus[clientId])
-                {
-                    ClientStatus[clientId].Online = DateTime.Now;
-                } 
-
+            if ( UpdateUserTime(clientId, DateTime.Now) )
+            { 
                 if (message.Trim().StartsWith(clientId + ".CometBase.Close();"))
                 {
                     RemoveClient(clientId);
-                    page.Response.Write("PokeIn.Closed();");
-                    page.Response.Flush();
+                    message = CreateText(clientId, "PokeIn.Closed();", false);
+                    if (ijStatus)
+                        message = "PokeIn.CreateText('" + message + "',true);";
+                    page.Response.Write(message);
                 }
                 else
                 {
@@ -277,36 +289,36 @@ namespace PokeIn.Comet
                     {
                         if (messages.Length > 0)
                         {
-                            page.Response.Write(messages);
+                            message = CreateText(clientId, messages, false);
+                            if (ijStatus)
+                                message = "PokeIn.CreateText('" + message.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r") + "',true);";
+                            else
+                                message = message.Replace("\\\'", "\'");
+                            page.Response.Write(message);
                         }
                     }
                     else if (messages == null)
                     {
                         RemoveClient(clientId);
-                        page.Response.Write("PokeIn.ClientObjectsDoesntExist();");
-                        page.Response.Write("PokeIn.Closed();");
-                        page.Response.Flush();
+                        message = CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false);
+                        if (ijStatus)
+                            message = "PokeIn.CreateText('" + message + "',true);";
+                        page.Response.Write(message);
                     } 
                 }
             }
             else
             {
                 RemoveClient(clientId);
-                page.Response.Write("PokeIn.ClientObjectsDoesntExist();");
-                page.Response.Flush();
+                message = CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false);
+                if (ijStatus)
+                    message = "PokeIn.CreateText('" + message + "',true);";
+                page.Response.Write(message);
             } 
         }
 
-        public static void Listen(System.Web.UI.Page page)
+        static bool UpdateUserTime(string clientId, DateTime date)
         {
-            string clientId = page.Request.Params["c"];
-
-            if (clientId == null)
-            {
-                return;
-            }
-            DateTime pageStart = DateTime.Now.AddMilliseconds(CometSettings.ListenerTimeout);
-
             bool hasClient = false;
 
             lock (ClientStatus)
@@ -318,10 +330,38 @@ namespace PokeIn.Comet
             {
                 lock (ClientStatus[clientId])
                 {
-                    ClientStatus[clientId].Online = DateTime.Now;
+                    ClientStatus[clientId].Online = date;
                 }
             }
 
+            return hasClient;
+        } 
+
+        public static void Listen(System.Web.UI.Page page)
+        {
+            if (!page.Request.Params.HasKeys())
+                return;
+
+            string clientId = page.Request.Params["c"];
+
+            if (clientId == null)
+            {
+                return;
+            }
+            DateTime pageStart = DateTime.Now.AddMilliseconds(CometSettings.ListenerTimeout);
+
+            bool ijStatus = false;
+            try
+            {
+                int n_status = Convert.ToInt16(page.Request.Params["ij"]);
+                bool status = Convert.ToBoolean(n_status);
+                ijStatus = status;
+            }
+            catch (Exception) { }
+
+            UpdateUserTime(clientId, DateTime.Now);
+
+            string message = "";
             while (true)
             {
                 string messages = "";
@@ -329,24 +369,40 @@ namespace PokeIn.Comet
                 {
                     if (messages.Length > 0)
                     {
-                        page.Response.Write(CreateText(clientId, messages + "PokeIn.Listen();", false)); 
+                        message = messages + "PokeIn.Listen();";
+                        message = CreateText(clientId, message, false);
+
+                        if (ijStatus)
+                            message = "PokeIn.CreateText('" + message.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r") + "',true);";
+                        else
+                            message = message.Replace("\\\'", "\'");
+
+                        page.Response.Write(message);
                         break;
                     }
                 }
                 else if (messages == null)
                 {
                     RemoveClient(clientId);
-                    page.Response.Write(CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false)); 
+                    message = CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false);
+                    if(ijStatus)
+                        message = "PokeIn.CreateText('" + message + "',true);";
+                    page.Response.Write(message); 
                     break;
                 }
 
                 if (pageStart < DateTime.Now)
                 {
-                    page.Response.Write(CreateText(clientId, "PokeIn.Listen();", false)); 
+                    message = CreateText(clientId, "PokeIn.Listen();", false);
+                    if (ijStatus)
+                        message = "PokeIn.CreateText('" + message + "',true);";
+                    page.Response.Write(message); 
                     break;
                 }
                 System.Threading.Thread.Sleep(50);
             }
+
+            UpdateUserTime(clientId, DateTime.Now.AddMilliseconds(-1 * (pageStart-DateTime.Now).Milliseconds));
         } 
 
         public static void SendToClient(string clientId, string message)
