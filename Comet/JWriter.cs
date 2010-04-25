@@ -27,7 +27,7 @@ namespace PokeIn.Comet
     internal class JWriter
     {
         static string Js = "";
-        public static void WriteClientScript(ref System.Web.UI.Page page, string clientId, string listenUrl, string sendUrl)
+        public static void WriteClientScript(ref System.Web.UI.Page page, string clientId, string listenUrl, string sendUrl, bool CometEnabled = true)
         {
             if (Js.Length == 0)
             {
@@ -48,6 +48,15 @@ namespace PokeIn.Comet
             clientJs = clientJs.Replace("[$$ClientId$$]", clientId);
             clientJs = clientJs.Replace("[$$ListenUrl$$]", listenUrl);
             clientJs = clientJs.Replace("[$$SendUrl$$]", sendUrl);
+
+            if (!CometEnabled)
+            {
+                clientJs += "\nPokeIn.CometEnabled = false;";
+            }
+            else
+            {
+                clientJs += "\nPokeIn.CometEnabled = true;";
+            }
 
             page.Response.Write("<script>\n" + clientJs + "\n" + PokeIn.DynamicCode.Definitions.JSON + "</script>");
         }

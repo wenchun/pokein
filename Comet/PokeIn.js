@@ -14,8 +14,8 @@ PokeIn.isMozilla = /Firefox/i.test(navigator.userAgent);
 PokeIn.isIE = /MSIE/i.test(navigator.userAgent);
 PokeIn.isOpera = /Opera/i.test(navigator.userAgent);
 PokeIn.isSafari = /Safari/i.test(navigator.userAgent);
-
 PokeIn.ForcePokeInAjax = false;
+PokeIn.CometEnabled = true;
 
 PokeIn.SetText = function(e, t) {
     if (e.innerText != null) {
@@ -146,8 +146,8 @@ PokeIn.Closed = function() {
     PokeIn.Started = false;
 }
 PokeIn.Started = false;
-PokeIn.Start = function() {
-    setTimeout(function() {
+PokeIn.Start = function () {
+    setTimeout(function () {
         if (PokeIn.Started) {
             return;
         }
@@ -159,9 +159,11 @@ PokeIn.Start = function() {
             self.location = self.location + conn_str + "rt=" + PokeIn.ListenCounter;
             return;
         }
-        PokeIn.Started = true; 
+        PokeIn.Started = true;
 
-        PokeIn.Listen();
+        if (PokeIn.CometEnabled) {
+            PokeIn.Listen();
+        }
     }, 10);
 }
 
@@ -239,6 +241,7 @@ PokeIn._Send = function (call_id) {
     else {
         _url = PokeIn.ListenUrl;
     }
+    txt.push('ce=' + (PokeIn.CometEnabled)); 
     txt.push('co=' + (PokeIn.ListenCounter++));
     txt = txt.join('&');
     var xmlHttp = PokeIn.RequestList[call_id].connector;

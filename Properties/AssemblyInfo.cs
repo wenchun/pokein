@@ -14,7 +14,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
  * 
- * Evaluate Library
+ * PokeIn Library
  * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
  */
 

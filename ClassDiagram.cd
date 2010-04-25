@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
   <Class Name="PokeIn.Comet.ClientCodeStatus">
-    <Position X="3.5" Y="5" Width="3.75" />
+    <Position X="3.5" Y="5.25" Width="3.75" />
     <TypeIdentifier>
       <HashCode>AAAAABAAAAAAAAAAAAAAEAAAAgAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Comet\ClientCodeStatus.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="PokeIn.Comet.CometWorker">
-    <Position X="0.5" Y="0.5" Width="6.75" />
+    <Position X="0.5" Y="0.5" Width="7.5" />
     <Members>
       <Field Name="_Thread" Hidden="true" />
       <Method Name="CheckStaticCreations" Hidden="true" />
@@ -21,6 +21,7 @@
       <Field Name="CodesToRun" Hidden="true" />
       <Method Name="CometWorker" Hidden="true" />
       <Method Name="CreateText" Hidden="true" />
+      <Method Name="ExecuteJobs" Hidden="true" />
       <Method Name="GrabClientMessages" Hidden="true" />
     </Members>
     <Compartments>
@@ -34,12 +35,12 @@
       </Class>
     </NestedTypes>
     <TypeIdentifier>
-      <HashCode>IAAhgAAAAECAAGAAhGggAAAAAAAAAAAAJAEAAAAAgAg=</HashCode>
+      <HashCode>IAAhgAAAAECAAGAAhGggAAAAAAAAAEAApAEAAAAAgAg=</HashCode>
       <FileName>Comet\CometWorker.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="PokeIn.Comet.BrowserHelper">
-    <Position X="0.5" Y="7.25" Width="8.25" />
+    <Position X="0.5" Y="7.5" Width="8.25" />
     <Compartments>
       <Compartment Name="Nested Types" Collapsed="false" />
     </Compartments>
@@ -51,12 +52,12 @@
       </Delegate>
     </NestedTypes>
     <TypeIdentifier>
-      <HashCode>AAAAgAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAgAAAAAAgAAAAAAAAAAAAAAAAAAABgAAAAAAAAAA=</HashCode>
       <FileName>Comet\BrowserHelper.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="PokeIn.Comet.CometSettings">
-    <Position X="0.5" Y="5" Width="2.75" />
+    <Position X="0.5" Y="5.25" Width="2.75" />
     <Members>
       <Field Name="clientTimeout" Hidden="true" />
       <Field Name="connectionLostTimeout" Hidden="true" />
@@ -69,7 +70,7 @@
     </TypeIdentifier>
   </Class>
   <Delegate Name="PokeIn.Comet.DefineClassObjects">
-    <Position X="7.5" Y="0.5" Width="2.5" />
+    <Position X="8.25" Y="0.5" Width="2.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAACAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Comet\CometWorker.cs</FileName>
