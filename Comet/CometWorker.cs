@@ -84,6 +84,12 @@ namespace PokeIn.Comet
                 }
                 object brO = new BrowserEvents(clientId);
                 DynamicCode.Definitions.Add("BrowserEvents", ref brO, clientId);
+                System.Reflection.FieldInfo fi = page.GetType().GetField("PokeInSafe") ;
+                if (fi != null)
+                {
+                    object br1 = page;
+                    DynamicCode.Definitions.Add("MainPage", ref br1, clientId);
+                }
             }
 
             if (!anyAdd)
@@ -91,6 +97,7 @@ namespace PokeIn.Comet
                 page.Response.Write("<script>alert('There is no server side class!');</script>");
                 return false;
             }
+
 
             JWriter.WriteClientScript(ref page, clientId, listenUrl, sendUrl, CometEnabled); 
 

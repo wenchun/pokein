@@ -60,17 +60,52 @@ namespace PokeIn
             classObjects[InstanceName + "." + ClassName] = DefinedObject;
             System.Reflection.MethodInfo[] methods = t.GetMethods();
 
+            bool enable_pokein_safety = false;
+            
+            System.Reflection.FieldInfo fi = t.GetField("PokeInSafe") ;
+            if (fi != null)
+            {
+                enable_pokein_safety = Convert.ToBoolean( fi.GetValue(DefinedObject) );
+            }
+
             json += "function " + ClassName + "(){}";
+
             for (int i = 0, ml = methods.Length; i < ml; i++)
             {
-                if (methods[i].Name == "GetHashCode" || methods[i].Name == "ToString" || methods[i].Name == "GetType" || methods[i].Name == "Equals")
+                if (methods[i].IsPrivate)
                     continue;
 
-                SubMember sm = new SubMember(); 
+                if (methods[i].ReturnParameter.ParameterType != typeof(void))
+                    continue;
+
+                if (enable_pokein_safety)
+                {
+                    if (!methods[i].Name.StartsWith("__"))
+                        continue;
+                }
+
+                System.Reflection.ParameterInfo[] paramz = methods[i].GetParameters();
+                bool is_compatible = true;
+                foreach (System.Reflection.ParameterInfo param in paramz)
+                {
+                    if (!param.ParameterType.IsSerializable)
+                    {
+                        is_compatible = false;
+                        break;
+                    }
+                    else if (param.ParameterType == typeof(System.EventArgs) )
+                    {
+                        is_compatible = false;
+                        break;
+                    }
+                }
+                if (!is_compatible)
+                    continue;
+
+                SubMember sm = new SubMember();
                 string completeName = ClassName + "." + methods[i].Name;
                 json += completeName + "=function(";
 
-                System.Reflection.ParameterInfo[] paramz = methods[i].GetParameters();
                 bool is_first = true;
                 string letterz = "";
                 List<string> stringList = new List<string>();
@@ -118,7 +153,8 @@ namespace PokeIn
                 json += ");\");}\n";
 
                 sm.SetMethod(methods[i]);
-                classMembers.Add(completeName, sm);
+                if(!classMembers.ContainsKey(completeName))
+                        classMembers.Add(completeName, sm);
             }
 
             System.Reflection.FieldInfo[] fields = t.GetFields();
