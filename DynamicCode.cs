@@ -21,6 +21,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PokeIn
 {
@@ -32,125 +33,9 @@ namespace PokeIn
         }
         
         public static Definition Definitions;
-        private string[] NameParser(string name, out bool is_func)
-        {
-            //function definition
-            string[] cls_fun = name.Split('.');
-
-            SubMember func = null;
-
-            if (cls_fun.Length == 2)
-            {
-                string className = cls_fun[0].Trim();
-                string methodName = cls_fun[1].Trim();
-
-                object defined_class = null;
-                Definitions.classObjects.TryGetValue(className, out defined_class);
-
-                if (defined_class != null)
-                {
-                    Definitions.classMembers.TryGetValue(className + "." + methodName, out func);
-                }
-
-                if (func == null || defined_class == null)
-                {
-                    is_func = false;
-                    return null;
-                }
-                is_func = func.isMethod;
-
-                return new String[2] { className, methodName };
-            }
-            else if (cls_fun.Length == 3)
-            {
-                string namespaceName = cls_fun[0].Trim();
-                string className = cls_fun[1].Trim();
-                string methodName = cls_fun[2].Trim();
-
-                object defined_class = null;
-                Definitions.classObjects.TryGetValue(namespaceName + "." + className, out defined_class);
-
-                if (defined_class != null)
-                {
-                    Definitions.classMembers.TryGetValue( className + "." + methodName, out func);
-                }
-
-                if (func == null || defined_class == null)
-                {
-                    is_func = false;
-                    return null;
-                }
-
-                is_func = func.isMethod;
-                return new String[3]{ namespaceName , className, methodName };
-            }
-            else
-            {
-                is_func = false;
-                return null;
-            }
-
-        }
-
-        private object[] ParsePropertyParams(string code)
-        {
-            int lp_pos = code.IndexOf('=');
-            if (lp_pos <= 0)
-                return null;
-            int rp_pos = code.LastIndexOf(';');
-
-            if (rp_pos < lp_pos)
-                return null;
-
-            if (rp_pos < code.Length - 1)
-                rp_pos = code.Length - 1;
-
-            bool is_func = false;
-            String[] names = NameParser(code.Substring(0,lp_pos), out is_func);
-            
-            if (names == null || is_func)
-                return null;
-
-            if (names.Length < 2)
-                return null;
-
-            //parameter definition
-            string param = code.Substring(lp_pos + 1, rp_pos - (lp_pos + 1)); 
-
-            SubMember func = null;
-            Definitions.classMembers.TryGetValue(names[names.Length-2] + "." + names[names.Length-1], out func);
-
-            string sub_p = param.Trim();
-
-            List<object> parameterList = new List<object>();
-            parameterList.Add(Convert.ChangeType(sub_p, func.parameterTypes[0]));
-
-            return new object[] { names, parameterList };   
-        }
-        private object[] ParseFunctionParams(string code)
-        {
-            int lp_pos = code.IndexOf('(');
-            if (lp_pos <= 0)
-                return null;
-            int rp_pos = code.LastIndexOf(')');
-
-            if (rp_pos < lp_pos)
-                return null;
-
-            bool is_func = false;
-            String[] names = NameParser(code.Substring(0, lp_pos), out is_func);
-
-            if (!is_func)
-                return null;
-
-            if (names == null)
-                return null;
-
-            if (names.Length < 2)
-                return null;
-
-            //parameter definition
-            string param = code.Substring(lp_pos + 1, rp_pos - (lp_pos + 1));
+ 
+        private object[] ParseFunctionParams(string methodClass, string param)
+        { 
             List<object> parameterList = new List<object>();
 
             string ParameterError = "";
@@ -159,7 +44,7 @@ namespace PokeIn
                 string[] param_list = param.Split(',');
 
                 SubMember func = null;
-                Definitions.classMembers.TryGetValue(names[names.Length-2] + "." + names[names.Length-1], out func);
+                Definitions.classMembers.TryGetValue(methodClass, out func);
 
                 int pos = 0;
                 while (pos < param_list.Length)
@@ -229,7 +114,7 @@ namespace PokeIn
             {
                 throw new System.Exception(ParameterError);
             }
-            return new object[] { names, parameterList };   
+            return parameterList.ToArray();   
         }
 
         private string errorMessage;
@@ -241,98 +126,52 @@ namespace PokeIn
             }
         }
 
-        private bool run(string stringToCall)
-        {
-            if (!stringToCall.Contains("(") && !stringToCall.Contains("="))
-            {
-                if (stringToCall.Trim().Replace("\r", "").Length != 0)
-                {
-                    errorMessage = "Syntax Error";
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
-            }
-            object[] method = null;
-
-            try
-            {
-                method = ParseFunctionParams(stringToCall);
-            }
-            catch (Exception e)
-            {
-                errorMessage = "Parameter Error(s) :: "+ e.Message;
-                return false;
-            }
-
-            if (method == null)
-            {
-                method = ParsePropertyParams(stringToCall);
-            }
-
-            if (method == null)
-            {
-                errorMessage = "Syntax Error";
-                return false;
-            }
-            string[] names = (string[])method[0];
-            object defined_class = null;
-            SubMember func = null;
-
-            string ClassName = "";
-            string BaseName = "";
-            if (names.Length > 2)
-            {
-                ClassName = names[0] + "." + names[1];
-                BaseName = names[1] + "." + names[2];
-            }
-            else
-            {
-                ClassName = names[0];
-                BaseName = names[0] + "." + names[1];
-            }
-
-            Definitions.classObjects.TryGetValue(ClassName, out defined_class);
-
-            if (defined_class != null)
-            {
-                Definitions.classMembers.TryGetValue(BaseName, out func);
-            }
-
-            object[] parameterz = ((List<object>)method[1]).ToArray();
-
-            try
-            {
-                if (func.isMethod)
-                    func.methodInfo.Invoke(defined_class, parameterz);
-                else if (func.isProperty)
-                    func.propertyInfo.GetSetMethod().Invoke(defined_class, parameterz);
-                else if (func.isField)
-                    func.fieldInfo.SetValue(defined_class, parameterz[0]);
-            }
-            catch (System.Exception e)
-            {
-                errorMessage = e.Message;
-                return false;
-            }
-
-            return true;
-        }
-
         public bool Run(string stringToCall)
         {
             errorMessage = "";
-            string[] codes = stringToCall.Split('\r');
-            for (int i = 0, ln = codes.Length; i < ln; i++)
+            Regex methods = new Regex(@"(?<Client>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot1>[\.]{1})(?<Class>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot2>[\.]{1})(?<Function>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<lp>[(]{1})(?<Params>.{0,})(?<rp>[)]{1}[;]?)");
+            MatchCollection mcMethods = methods.Matches(stringToCall);  
+
+            for (int i = 0; i < mcMethods.Count; i++)
             {
-                if (!run(codes[i].Trim()))
+                bool status = mcMethods[i].Success;
+                if(!status)
+                    continue;
+
+                string clientName = mcMethods[i].Groups["Client"].Value.Trim();
+                string className = mcMethods[i].Groups["Class"].Value.Trim();
+                string methodName = mcMethods[i].Groups["Function"].Value.Trim();
+                string param = mcMethods[i].Groups["Params"].Value.Trim();
+
+                object[] paramList = this.ParseFunctionParams(className + "." + methodName, param);
+
+                object defined_class = null;
+                SubMember func = null;
+
+                Definitions.classObjects.TryGetValue(clientName + "." + className, out defined_class);
+
+                if (defined_class != null)
                 {
-                    this.errorMessage = "Line " + i.ToString() + " ::  " + errorMessage;
+                    Definitions.classMembers.TryGetValue(className + "." + methodName, out func);
+                } 
+
+                try
+                {
+                    if (func.isMethod)
+                        func.methodInfo.Invoke(defined_class, paramList);
+                    /*else if (func.isProperty)
+                        func.propertyInfo.GetSetMethod().Invoke(defined_class, paramList);
+                    else if (func.isField)
+                        func.fieldInfo.SetValue(defined_class, paramList[0]);*/
+                }
+                catch (System.Exception e)
+                {
+                    errorMessage = e.Message;
                     return false;
-                }                
-            }
+                }
+               
+                paramList = null;
+            } 
             return true;
         }
     }

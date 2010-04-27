@@ -228,6 +228,7 @@ namespace PokeIn.Comet
             string clide = clientId.Substring(1, clientId.Length - 1);
             string []lst = new string[5] { ".", "(", ")", "{", "}"  };
             if (_in) {
+                mess = mess.Replace("\n", "\\n").Replace("\r","\\r");
                 for (var i = 0; i < 5; i++) {
                     mess = mess.Replace(":" + clide + i.ToString() + ":", lst[i]);
                 }
