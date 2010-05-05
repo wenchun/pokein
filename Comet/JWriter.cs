@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Comet Library  
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 using System;
 using System.Collections.Generic;
@@ -37,17 +37,21 @@ namespace PokeIn.Comet
                 stm.Read(bt, 0, (System.Int32)stm.Length);
                 Js = System.Text.Encoding.UTF8.GetString(bt, 0, (System.Int32)stm.Length);
                 stm.Close();
-                Js = Js.Replace("\r\n", "");
-                Js = Js.Replace("}", "}\n");
-                Js = Js.Replace("}\n'", "}'");
+                Js = Js.Replace("\r\n", "");  
+                Js = Js.Replace("   ", ""); 
+
+                string[] obfs = new string[] { "_callback_", "_Send", "ListenUrl", "SendUrl", "XMLString", "js_class", "RequestList", "ListenCounter", "RepHelper", "connector", "call_id" };
+                int counter = 0;
+                foreach (string obf in obfs)
+                    Js = Js.Replace(obf, "_"+(counter++).ToString());
                 bt = null;
             }
 
             string clientJs = Js;
 
             clientJs = clientJs.Replace("[$$ClientId$$]", clientId);
-            clientJs = clientJs.Replace("[$$ListenUrl$$]", listenUrl);
-            clientJs = clientJs.Replace("[$$SendUrl$$]", sendUrl);
+            clientJs = clientJs.Replace("[$$Listen$$]", listenUrl);
+            clientJs = clientJs.Replace("[$$Send$$]", sendUrl);
 
             if (!CometEnabled)
             {

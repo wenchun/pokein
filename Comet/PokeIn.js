@@ -1,4 +1,4 @@
-﻿/** PokeIn Comet Library (pokein.codeplex.com) (GPL v2) Copyright © 2010 (info@pokein.com)*/
+﻿/** PokeIn Comet Library (pokein.codeplex.com) (GPL v2) Copyright © 2010 Oguz Bastemur (info@pokein.com)*/
 function PokeIn() {
 }
 
@@ -6,8 +6,8 @@ PokeIn.clid = '[$$ClientId$$]';
 PokeIn.OnError = null;
 PokeIn.Request = 0;
 PokeIn.RequestList = [];
-PokeIn.ListenUrl = '[$$ListenUrl$$]';
-PokeIn.SendUrl = '[$$SendUrl$$]';
+PokeIn.ListenUrl = '[$$Listen$$]';
+PokeIn.SendUrl = '[$$Send$$]';
 PokeIn.ListenCounter = new Date().getTime();
 PokeIn.IsConnected = true;
 PokeIn.isMozilla = /Firefox/i.test(navigator.userAgent);
@@ -17,16 +17,18 @@ PokeIn.isSafari = /Safari/i.test(navigator.userAgent);
 PokeIn.ForcePokeInAjax = false;
 PokeIn.CometEnabled = true;
 
-PokeIn.SetText = function(e, t) {
+PokeIn.SetText = function (e, t) {
     if (e.innerText != null) {
         e.innerText = t;
-    } else {
+    }
+    else 
+    {
         e.textContent = t;
     }
-}
+};
 
-PokeIn.ToXML = function(js_class) {
-    var XMLString = ""; 
+PokeIn.ToXML = function (js_class) {
+    var XMLString = "";
     if (typeof js_class == "object") {
         if (js_class instanceof Array) {
             for (i = 0, ln = js_class.length; i < ln; i++) {
@@ -48,58 +50,60 @@ PokeIn.ToXML = function(js_class) {
     }
 
     return XMLString;
-}
+};
 
-PokeIn.AddEvent = function(_e, _n, _h) {
+PokeIn.AddEvent = function (_e, _n, _h) {
     if (window.attachEvent) {
         _e.attachEvent("on" + _n, _h);
     }
     else {
         _e.addEventListener(_n, _h, false);
     }
-}
+};
 
-PokeIn.GetClientId = function() {
+PokeIn.GetClientId = function () {
     return PokeIn.clid;
-}
+};
 
-PokeIn.Listen = function() {
+PokeIn.Listen = function () {
     if (!PokeIn.IsConnected) {
         return;
     }
     PokeIn.Request++;
     PokeIn.RequestList[PokeIn.Request] = { status: true, message: "", connector: PokeIn.CreateAjax(PokeIn.Request), is_send: false };
     PokeIn._Send(PokeIn.Request);
-}  
-PokeIn.UnfinishedMessageReceived = function() {
-    if (PokeIn.OnError != null) {
-        PokeIn.OnError('Unfinished Message Received', false);/*string message, bool is_fatal_error*/
-    }
-} 
-PokeIn.UnfinishedMessageSent = function() {
-    if (PokeIn.OnError != null) {
-        PokeIn.OnError('Unfinished Message Sent', false); /*string message, bool is_fatal_error*/
-    }
-} 
+};
 
-PokeIn.CompilerError = function(message) {
+PokeIn.UnfinishedMessageReceived = function () {
     if (PokeIn.OnError != null) {
-        PokeIn.OnError('Compiler Error Received: '+message, false); /*string message, bool is_fatal_error*/
+        PokeIn.OnError('Unfinished Message Received', false);
     }
-} 
+};
 
-PokeIn.ClientObjectsDoesntExist = function() {
+PokeIn.UnfinishedMessageSent = function () {
     if (PokeIn.OnError != null) {
-        PokeIn.OnError('Client Objects Doesnt Exist', true); /*string message, bool is_fatal_error*/
+        PokeIn.OnError('Unfinished Message Sent', false);
     }
-}
+};
 
-PokeIn.RepHelper = function(s1, s2, s3) {
+PokeIn.CompilerError = function (message) {
+    if (PokeIn.OnError != null) {
+        PokeIn.OnError('Compiler Error Received: ' + message, false);
+    }
+};
+
+PokeIn.ClientObjectsDoesntExist = function () {
+    if (PokeIn.OnError != null) {
+        PokeIn.OnError('Client Objects Doesnt Exist', true);
+    }
+};
+
+PokeIn.RepHelper = function (s1, s2, s3) {
     while (s1.indexOf(s2) >= 0) {
         s1 = s1.replace(s2, s3);
     }
     return s1;
-}
+};
 
 PokeIn.CreateText = function (mess, _in) {
     var len = PokeIn.clid.length - 1;
@@ -118,8 +122,10 @@ PokeIn.CreateText = function (mess, _in) {
     if (_in && PokeIn.ForcePokeInAjax) {
         try { eval(mess); } catch (e) { }
     }
-    else return mess;
-}
+    else {
+        return mess;
+    }
+};
 
 PokeIn.StrFix = function (str) {
     str = str.replace(/[&]/g, '&quot;');
@@ -127,26 +133,29 @@ PokeIn.StrFix = function (str) {
     str = str.replace(/["]/g, '\\"');
     str = '"' + str + '"';
     return str;
-}
+};
 
-PokeIn.Send = function(mess) {
+PokeIn.Send = function (mess) {
     if (!PokeIn.IsConnected) {
         return;
     }
     PokeIn.Request++;
     PokeIn.RequestList[PokeIn.Request] = { status: true, message: PokeIn.CreateText(mess, false), connector: PokeIn.CreateAjax(PokeIn.Request), is_send: true };
     PokeIn._Send(PokeIn.Request);
-}
-PokeIn.Close = function() {
+};
+
+PokeIn.Close = function () {
     PokeIn.Send(PokeIn.GetClientId() + '.CometBase.Close();');
-} 
-PokeIn.Closed = function() {
+};
+
+PokeIn.Closed = function () {
     PokeIn.OnError = null;
     PokeIn.IsConnected = false;
     PokeIn.Started = false;
-}
+};
+
 PokeIn.Started = false;
-PokeIn.Start = function () {
+PokeIn.Start = function (_callback_) {
     setTimeout(function () {
         if (PokeIn.Started) {
             return;
@@ -157,6 +166,10 @@ PokeIn.Start = function () {
                 conn_str = "&";
             }
             self.location = self.location + conn_str + "rt=" + PokeIn.ListenCounter;
+
+            if (_callback_ != null) {
+                _callback_(false);
+            }
             return;
         }
         PokeIn.Started = true;
@@ -164,10 +177,14 @@ PokeIn.Start = function () {
         if (PokeIn.CometEnabled) {
             PokeIn.Listen();
         }
-    }, 10);
-}
 
-PokeIn.HttpRequest = function(id) {
+        if (_callback_ != null) {
+            _callback_(true);
+        }
+    }, 10);
+};
+
+PokeIn.HttpRequest = function (id) {
     this.Headers = {};
     this.method = "";
     this.url = "";
@@ -177,17 +194,17 @@ PokeIn.HttpRequest = function(id) {
     this.status = 0;
     this.parameters = "";
     this.id = id;
-}
+};
 
-PokeIn.HttpRequest.prototype.setRequestHeader = function(_type, _value) {
+PokeIn.HttpRequest.prototype.setRequestHeader = function (_type, _value) {
     this.Headers[_type] = _value;
-}
+};
 
-PokeIn.HttpRequest.prototype.open = function(_method, _url, _async) {
+PokeIn.HttpRequest.prototype.open = function (_method, _url, _async) {
     this.method = _method;
     this.url = _url;
     this.async = _async;
-}
+};
 
 PokeIn.HttpRequest.prototype.send = function (_parameters) {
     this.parameters = _parameters;
@@ -203,10 +220,10 @@ PokeIn.HttpRequest.prototype.send = function (_parameters) {
             _this.onreadystatechange();
             delete _this._element.parentNode.removeChild(_this._element);
         }
-    }
+    };
     this._element.src = this.url + "?ij=1&" + _parameters;
     document.getElementsByTagName("head")[0].appendChild(this._element);
-}
+};
 
 PokeIn.CreateAjax = function (id) {
     if (PokeIn.ForcePokeInAjax) {
@@ -230,7 +247,8 @@ PokeIn.CreateAjax = function (id) {
         }
     }
     return xmlHttp;
-}
+};
+
 PokeIn._Send = function (call_id) {
     var txt = [];
     txt.push('c=' + PokeIn.GetClientId());
@@ -241,7 +259,7 @@ PokeIn._Send = function (call_id) {
     else {
         _url = PokeIn.ListenUrl;
     }
-    txt.push('ce=' + (PokeIn.CometEnabled)); 
+    txt.push('ce=' + (PokeIn.CometEnabled));
     txt.push('co=' + (PokeIn.ListenCounter++));
     txt = txt.join('&');
     var xmlHttp = PokeIn.RequestList[call_id].connector;
@@ -268,6 +286,6 @@ PokeIn._Send = function (call_id) {
             PokeIn.RequestList[call_id].connector = null;
             xmlHttp = null;
         }
-    }
+    };
     xmlHttp.send(txt);
-}
+};

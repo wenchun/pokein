@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Comet Library (pokein.codeplex.com)
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 
 using System;
@@ -157,12 +157,7 @@ namespace PokeIn
 
                 try
                 {
-                    if (func.isMethod)
-                        func.methodInfo.Invoke(defined_class, paramList);
-                    /*else if (func.isProperty)
-                        func.propertyInfo.GetSetMethod().Invoke(defined_class, paramList);
-                    else if (func.isField)
-                        func.fieldInfo.SetValue(defined_class, paramList[0]);*/
+                    func.methodInfo.Invoke(defined_class, paramList);
                 }
                 catch (System.Exception e)
                 {

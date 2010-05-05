@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Comet Library (pokein.codeplex.com)
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 
 using System;
@@ -29,6 +29,13 @@ namespace PokeIn
         public List<string> definedClasses;
         public Dictionary<string, object> classObjects;
         public Dictionary<string, SubMember> classMembers;
+        private string json;
+
+        public string JSON
+        {
+            get { return json; }
+        }
+
         public Definition()
         {
             definedClasses = new List<string>();
@@ -37,11 +44,6 @@ namespace PokeIn
             json = "";
         }
 
-        private string json;
-        public string JSON
-        {
-            get { return json; }
-        }
         public void Add(string ClassName, ref object DefinedObject, string InstanceName)
         {
             if (definedClasses.Contains(ClassName))
@@ -68,7 +70,11 @@ namespace PokeIn
                 enable_pokein_safety = Convert.ToBoolean( fi.GetValue(DefinedObject) );
             }
 
-            json += "function " + ClassName + "(){}";
+            StringBuilder sbJson = new StringBuilder();
+
+            sbJson.Append("function ");
+            sbJson.Append(ClassName);
+            sbJson.Append("(){}"); 
 
             for (int i = 0, ml = methods.Length; i < ml; i++)
             {
@@ -104,24 +110,29 @@ namespace PokeIn
 
                 SubMember sm = new SubMember();
                 string completeName = ClassName + "." + methods[i].Name;
-                json += completeName + "=function(";
+
+                sbJson.Append(completeName);
+                sbJson.Append("=function(");
 
                 bool is_first = true;
-                string letterz = "";
+                
                 List<string> stringList = new List<string>();
                 List<string> letterList = new List<string>();
 
                 int indexer = 0;
+                StringBuilder letterz = new StringBuilder();
+
                 foreach (System.Reflection.ParameterInfo param in paramz)
                 {
                     if(!is_first)
                     {
-                        letterz += ",";
+                        letterz.Append(",");
                     }
                     
                     sm.parameterTypes.Add(param.ParameterType);
                     string paramName = "a"+(indexer).ToString();
-                    letterz += paramName;
+                    letterz.Append(paramName);
+
                     if (param.ParameterType == typeof(System.String))
                     {
                         stringList.Add(paramName + "=PokeIn.StrFix(" + paramName + ");");
@@ -131,51 +142,39 @@ namespace PokeIn
                     is_first = false;
                     indexer++;
                 }
+                sbJson.Append(letterz.ToString(0,letterz.Length));
+                sbJson.Append("){");
 
-                json += letterz + "){";
                 foreach (string str in stringList)
-                    json += str;
-                json += "PokeIn.Send(PokeIn.GetClientId() + \"." + completeName + "(";
+                    sbJson.Append(str);
+
+                sbJson.Append("PokeIn.Send(PokeIn.GetClientId() + \".");
+                sbJson.Append(completeName + "(");
+
                 is_first = true;
                 foreach (string strLetter in letterList)
                 {
                     if(!is_first)
                     {
-                        json += "+\",";
+                        sbJson.Append( "+\"," );
                     }
-                    json += "\"+" + strLetter;
+                    sbJson.Append( "\"+" + strLetter );
                     is_first = false;
                 }
                 if (!is_first)
                 {
-                    json += "+\"";
+                    sbJson.Append( "+\"" );
                 }
-                json += ");\");}\n";
+                sbJson.Append( ");\");}\n" );
 
+                lock (json)
+                {
+                    json += sbJson.ToString(0,sbJson.Length);
+                }
                 sm.SetMethod(methods[i]);
                 if(!classMembers.ContainsKey(completeName))
                         classMembers.Add(completeName, sm);
-            }
-
-            System.Reflection.FieldInfo[] fields = t.GetFields();
-            for (int i = 0, fl = fields.Length; i < fl; i++)
-            {
-                SubMember sm = new SubMember();
-
-                sm.parameterTypes.Add(fields[i].FieldType);
-                sm.SetField(fields[i]);
-                classMembers.Add(ClassName + "." + fields[i].Name, sm);
-            }
-
-            System.Reflection.PropertyInfo[] props = t.GetProperties();
-            for (int i = 0, pl = props.Length; i < pl; i++)
-            {
-                SubMember sm = new SubMember();
-
-                sm.parameterTypes.Add(props[i].PropertyType);
-                sm.SetProperty(props[i]);
-                classMembers.Add(ClassName + "." + props[i].Name, sm);
-            }
+            } 
         }
     };
 

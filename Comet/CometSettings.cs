@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Comet Library (pokein.codeplex.com)
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 using System;
 using System.Collections.Generic;

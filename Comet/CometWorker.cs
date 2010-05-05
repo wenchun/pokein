@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Comet Library
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 using System;
 using System.Collections.Generic;
@@ -53,6 +53,62 @@ namespace PokeIn.Comet
             }
         }
 
+        static long hClientId = 0;
+        static bool hClientIdBusy = false;
+
+        static string NewClientId
+        {
+            get
+            {
+                if(hClientId==0){
+                    hClientId = DateTime.Now.ToFileTime();
+                    hClientId /= 1000000;
+                }
+
+                int busy_counter = 0;
+                while (hClientIdBusy)
+                {
+                    System.Threading.Thread.Sleep(15);
+                    if (busy_counter++ > 100)
+                    {
+                        hClientId = DateTime.Now.ToFileTime();
+                        hClientId /= 1000000;
+                        break;
+                    }
+                }
+                hClientIdBusy = true;
+                hClientId++;
+                string clientId = "C" + (hClientId).ToString();
+                hClientIdBusy = false;
+                return clientId;
+            }
+        }
+
+        static bool UpdateUserTime(string clientId, DateTime date)
+        {
+            bool hasClient = false;
+
+            lock (ClientStatus)
+            {
+                hasClient = ClientStatus.ContainsKey(clientId);
+            }
+
+            if (hasClient)
+            {
+                lock (ClientStatus[clientId])
+                {
+                    ClientStatus[clientId].Online = date;
+                }
+            }
+
+            return hasClient;
+        }
+
+        public static bool Bind(string handlerUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId)
+        {
+            return Bind(handlerUrl, handlerUrl, page, classDefs, out clientId, true);
+        }
+
         public static bool Bind(string listenUrl, string sendUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId)
         {
             return Bind(listenUrl, sendUrl, page, classDefs, out clientId, true); 
@@ -60,7 +116,7 @@ namespace PokeIn.Comet
 
         public static bool Bind(string listenUrl, string sendUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId, bool CometEnabled)
         {
-            clientId = "C" + DateTime.Now.ToFileTime().ToString();
+            clientId = NewClientId;
 
             CheckStaticCreations();
 
@@ -96,8 +152,7 @@ namespace PokeIn.Comet
             {
                 page.Response.Write("<script>alert('There is no server side class!');</script>");
                 return false;
-            }
-
+            } 
 
             JWriter.WriteClientScript(ref page, clientId, listenUrl, sendUrl, CometEnabled); 
 
@@ -241,6 +296,23 @@ namespace PokeIn.Comet
             return mess;
         }
 
+        #region Handlers
+        public static void Handle(System.Web.UI.Page page)
+        {
+            if (!page.Request.Params.HasKeys())
+                return;
+
+            string message = page.Request.Params["ms"]; 
+            if (message == null)
+            {
+                Listen(page);
+            }
+            else
+            {
+                Send(page);
+            }
+        }
+
         public static void Send(System.Web.UI.Page page)
         {
             if (!page.Request.Params.HasKeys())
@@ -362,26 +434,6 @@ namespace PokeIn.Comet
             } 
         }
 
-        static bool UpdateUserTime(string clientId, DateTime date)
-        {
-            bool hasClient = false;
-
-            lock (ClientStatus)
-            {
-                hasClient = ClientStatus.ContainsKey(clientId);
-            }
-
-            if (hasClient)
-            {
-                lock (ClientStatus[clientId])
-                {
-                    ClientStatus[clientId].Online = date;
-                }
-            }
-
-            return hasClient;
-        } 
-
         public static void Listen(System.Web.UI.Page page)
         {
             if (!page.Request.Params.HasKeys())
@@ -431,12 +483,12 @@ namespace PokeIn.Comet
                     }
                 }
 
-                clientTester++;
                 if (clientTester % 40 == 0)
                 {
                     page.Response.Write(" ");
                     page.Response.Flush();
                 }
+                clientTester++;
                 
                 if (messages == null || !page.Response.IsClientConnected)
                 {
@@ -457,8 +509,12 @@ namespace PokeIn.Comet
                     break;
                 }
                 System.Threading.Thread.Sleep(50);
-            }  
-        } 
+            }
+
+            UpdateUserTime(clientId, DateTime.Now.AddMilliseconds(-1 * (CometSettings.ListenerTimeout)));
+        }
+        #endregion
+
 
         public static void SendToClient(string clientId, string message)
         {
@@ -485,6 +541,7 @@ namespace PokeIn.Comet
                 SendToClient(clientId, message);
             }
         }
+
         public static string[] GetClientIds()
         {
             string[] clientIds = null;

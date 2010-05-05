@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Comet Library (pokein.codeplex.com)
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 
 using System;
@@ -71,13 +71,10 @@ namespace PokeIn.Comet
             }
 
             Comet.CometWorker.SendToClient(clientId, @"
-            document.__" + SimpleName + @" = function(ev){
-                PokeIn.Send(PokeIn.GetClientId()+'.BrowserEvents.Fired(" + ElementId + @","+ EventName + @","+ReturnValue+@");'); 
-            }
-            function c3eb(){
-                var _item = " + ObjectType + @";
-                PokeIn.AddEvent(_item, '" + EventName + @"', document.__" + SimpleName + @");
-            }"+"\nc3eb();\n");
+            document.__" + SimpleName + " = function(ev){PokeIn.Send(PokeIn.GetClientId()+'.BrowserEvents.Fired("  
+                         + ElementId + ","+ EventName + ","+ReturnValue+");'); };function c3eb(){var _item = " 
+                         + ObjectType + "; PokeIn.AddEvent(_item, '" + EventName + "', document.__" 
+                                            + SimpleName + ");}"+"\nc3eb();\n");
         }
 
         public static string SafeParameter(string message)
