@@ -1,0 +1,32 @@
+﻿* PokeIn Comet Library v0.82
+* Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
+
+* This version of PokeIn contains;
+  JS Obfuscator, Multithread safety and Performance improvements
+
+* New Parameter :: PokeIn.Start( _callback_ )
+  Now, there is a parameter in this function to determine PokeIn status.
+  i.e
+  PokeIn.Start( 
+  	function(is_done){
+		if(is_done){
+			Dummy.Calculate();
+		}
+		else{
+			alert('There is a problem on the server side!');
+		}
+	}
+  );
+
+* New Method :: PokeIn.Comet.CometWorker.Handle
+  Now, you dont have to define 2 files to Listen and Send. ( but still you can )
+  There is a new "Handle" option.
+
+  Base page :
+  PokeIn.Comet.CometWorker.Bind("Handler.aspx", this, new PokeIn.Comet.DefineClassObjects(.....................
+
+  Handler.aspx :
+  PokeIn.Comet.CometWorker.Handle(this);
+
+
+	

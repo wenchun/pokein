@@ -126,47 +126,52 @@ namespace PokeIn
             }
         }
 
-        public bool Run(string stringToCall)
+        public bool Run(string call_string)
         {
-            errorMessage = "";
-            Regex methods = new Regex(@"(?<Client>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot1>[\.]{1})(?<Class>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot2>[\.]{1})(?<Function>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<lp>[(]{1})(?<Params>.{0,})(?<rp>[)]{1}[;]?)");
-            MatchCollection mcMethods = methods.Matches(stringToCall);  
+            string[] safe_methods = call_string.Split('\r');
 
-            for (int i = 0; i < mcMethods.Count; i++)
+            foreach (string stringToCall in safe_methods)
             {
-                bool status = mcMethods[i].Success;
-                if(!status)
-                    continue;
+                errorMessage = "";
+                Regex methods = new Regex(@"(?<Client>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot1>[\.]{1})(?<Class>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot2>[\.]{1})(?<Function>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<lp>[(]{1})(?<Params>.{0,})(?<rp>[)]{1}[;]?)");
+                MatchCollection mcMethods = methods.Matches(stringToCall);
 
-                string clientName = mcMethods[i].Groups["Client"].Value.Trim();
-                string className = mcMethods[i].Groups["Class"].Value.Trim();
-                string methodName = mcMethods[i].Groups["Function"].Value.Trim();
-                string param = mcMethods[i].Groups["Params"].Value.Trim();
-
-                object[] paramList = this.ParseFunctionParams(className + "." + methodName, param);
-
-                object defined_class = null;
-                SubMember func = null;
-
-                Definitions.classObjects.TryGetValue(clientName + "." + className, out defined_class);
-
-                if (defined_class != null)
+                for (int i = 0; i < mcMethods.Count; i++)
                 {
-                    Definitions.classMembers.TryGetValue(className + "." + methodName, out func);
-                } 
+                    bool status = mcMethods[i].Success;
+                    if (!status)
+                        continue;
 
-                try
-                {
-                    func.methodInfo.Invoke(defined_class, paramList);
+                    string clientName = mcMethods[i].Groups["Client"].Value.Trim();
+                    string className = mcMethods[i].Groups["Class"].Value.Trim();
+                    string methodName = mcMethods[i].Groups["Function"].Value.Trim();
+                    string param = mcMethods[i].Groups["Params"].Value.Trim();
+
+                    object[] paramList = this.ParseFunctionParams(className + "." + methodName, param);
+
+                    object defined_class = null;
+                    SubMember func = null;
+
+                    Definitions.classObjects.TryGetValue(clientName + "." + className, out defined_class);
+
+                    if (defined_class != null)
+                    {
+                        Definitions.classMembers.TryGetValue(className + "." + methodName, out func);
+                    }
+
+                    try
+                    {
+                        func.methodInfo.Invoke(defined_class, paramList);
+                    }
+                    catch (System.Exception e)
+                    {
+                        errorMessage = e.Message;
+                        return false;
+                    }
+
+                    paramList = null;
                 }
-                catch (System.Exception e)
-                {
-                    errorMessage = e.Message;
-                    return false;
-                }
-               
-                paramList = null;
-            } 
+            }
             return true;
         }
     }

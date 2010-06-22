@@ -25,7 +25,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("PokeIn")]
 [assembly: AssemblyDescription("PokeIn Comet Library")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("info@pokein.com")]
+[assembly: AssemblyCompany("Oguz Bastemur")]
 [assembly: AssemblyProduct("PokeIn")]
 [assembly: AssemblyCopyright("Copyright ©  2010. PokeIn")]
 [assembly: AssemblyTrademark("")]
@@ -33,5 +33,5 @@ using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
 [assembly: Guid("7a67cc67-b65e-47ca-84f0-00a90af5524b")]
-[assembly: AssemblyVersion("0.8.0.0")]
-[assembly: AssemblyFileVersion("0.8.0.0")]
+[assembly: AssemblyVersion("0.8.3.0")]
+[assembly: AssemblyFileVersion("0.8.3.0")]

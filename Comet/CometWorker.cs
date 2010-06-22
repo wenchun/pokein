@@ -28,62 +28,46 @@ namespace PokeIn.Comet
 
     public class CometWorker
     {
+        #region Members
         static PokeIn.DynamicCode Code = null;
-        static Dictionary<string, CometMessage> Clients = null;
-        static Dictionary<string, List<string>> ClientScriptsLog = null; 
-        public static Dictionary<string, ClientCodeStatus> ClientStatus = null;
+        static Dictionary<string, CometMessage> Clients = new Dictionary<string, CometMessage>();
+        static Dictionary<string, List<string>> ClientScriptsLog = new Dictionary<string, List<string>>();
+        public static Dictionary<string, ClientCodeStatus> ClientStatus = new Dictionary<string, ClientCodeStatus>();
+        static long hClientId = 0;
+        #endregion
 
+        #region will_be_removed
         static void CheckStaticCreations()
         {
             if (Code == null)
             {
                 Code = new PokeIn.DynamicCode();
             }
-            if (Clients == null)
-            {
-                Clients = new Dictionary<string, CometMessage>();
-            }
-            if (ClientStatus == null)
-            {
-                ClientStatus = new Dictionary<string, ClientCodeStatus>();
-            }
-            if (ClientScriptsLog == null)
-            {
-                ClientScriptsLog = new Dictionary<string, List<string>>();
-            }
         }
+        #endregion
 
-        static long hClientId = 0;
-        static bool hClientIdBusy = false;
-
+        #region NewClientId
         static string NewClientId
         {
             get
             {
-                if(hClientId==0){
-                    hClientId = DateTime.Now.ToFileTime();
-                    hClientId /= 1000000;
-                }
-
-                int busy_counter = 0;
-                while (hClientIdBusy)
+                lock (ClientScriptsLog)
                 {
-                    System.Threading.Thread.Sleep(15);
-                    if (busy_counter++ > 100)
+                    if (hClientId == 0)
                     {
                         hClientId = DateTime.Now.ToFileTime();
                         hClientId /= 1000000;
-                        break;
                     }
+
+                    hClientId++;
+                    string clientId = "C" + (hClientId).ToString(); 
+                    return clientId;
                 }
-                hClientIdBusy = true;
-                hClientId++;
-                string clientId = "C" + (hClientId).ToString();
-                hClientIdBusy = false;
-                return clientId;
             }
         }
+        #endregion
 
+        #region UpdateUserTime
         static bool UpdateUserTime(string clientId, DateTime date)
         {
             bool hasClient = false;
@@ -103,7 +87,9 @@ namespace PokeIn.Comet
 
             return hasClient;
         }
+        #endregion
 
+        #region Binds
         public static bool Bind(string handlerUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId)
         {
             return Bind(handlerUrl, handlerUrl, page, classDefs, out clientId, true);
@@ -113,9 +99,9 @@ namespace PokeIn.Comet
         {
             return Bind(listenUrl, sendUrl, page, classDefs, out clientId, true); 
         }
-
+         
         public static bool Bind(string listenUrl, string sendUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId, bool CometEnabled)
-        {
+        {  
             clientId = NewClientId;
 
             CheckStaticCreations();
@@ -157,20 +143,22 @@ namespace PokeIn.Comet
             JWriter.WriteClientScript(ref page, clientId, listenUrl, sendUrl, CometEnabled); 
 
             CometWorker worker = new CometWorker(clientId);
-            if (CometEnabled)
-            {
-                System.Threading.ThreadStart Ts = new System.Threading.ThreadStart(worker.ClientThread);
-                worker._Thread = new System.Threading.Thread(Ts);
-                worker._Thread.Start();
-            }
 
             lock (ClientStatus)
             {
-                ClientStatus.Add(clientId, new ClientCodeStatus(ref worker));
-            }
+                ClientStatus.Add(clientId, new ClientCodeStatus(worker));
 
+                if (CometEnabled)
+                {
+                    System.Threading.ThreadStart Ts = new System.Threading.ThreadStart(ClientStatus[clientId].Worker.ClientThread);
+                    ClientStatus[clientId].Worker._Thread = new System.Threading.Thread(Ts);
+                    ClientStatus[clientId].Worker._Thread.Start();
+                }
+            } 
+             
             return true;
         }
+        #endregion
 
         #region non-static
 
@@ -192,53 +180,60 @@ namespace PokeIn.Comet
                 hasClient = ClientStatus.ContainsKey(ClientId);
             }
 
-            while (hasClient)
+            try
             {
-                int record_count = 0;
-                lock (CodesToRun)
+                while (hasClient)
                 {
-                    record_count = CodesToRun.Count;
-                }
-                if (record_count == 0)
-                {
-                    int _timer = 30 + ((roundCounter / 100) * 15);
-                    totalWait += _timer;
-                    System.Threading.Thread.Sleep(_timer);
-                    roundCounter++;
-
-                    if (totalWait > CometSettings.ClientTimeout)
+                    int record_count = 0;
+                    lock (CodesToRun)
                     {
-                        SendToClient(ClientId, "PokeIn.Closed();");
-                        break;
+                        record_count = CodesToRun.Count;
                     }
-                    if (roundCounter % 60 == 0)
+                    if (record_count == 0)
                     {
-                        hasClient = false;
-                        lock (ClientStatus)
+                        int _timer = 30 + ((roundCounter / 100) * 15);
+                        totalWait += _timer;
+                        System.Threading.Thread.Sleep(_timer);
+                        roundCounter++;
+
+                        if (totalWait > CometSettings.ClientTimeout)
                         {
-                            hasClient = ClientStatus.ContainsKey(ClientId);
+                            SendToClient(ClientId, "PokeIn.Closed();");
+                            break;
                         }
-                        if (hasClient)
+                        if (roundCounter % 60 == 0)
                         {
-                            lock (ClientStatus[ClientId])
+                            hasClient = false;
+                            lock (ClientStatus)
                             {
-                                if (ClientStatus[ClientId].Online < DateTime.Now.AddMilliseconds(-1 * CometSettings.ConnectionLostTimeout))
+                                hasClient = ClientStatus.ContainsKey(ClientId);
+                            }
+                            if (hasClient)
+                            {
+                                lock (ClientStatus[ClientId])
                                 {
-                                    totalWait = CometSettings.ClientTimeout + 1;
-                                    SendToClient(ClientId, "PokeIn.Closed();");
-                                    break;
+                                    if (ClientStatus[ClientId].Online < DateTime.Now.AddMilliseconds(-1 * CometSettings.ConnectionLostTimeout))
+                                    {
+                                        hasClient = false;
+                                        SendToClient(ClientId, "PokeIn.Closed();");
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
+                    else
+                    {
+                        totalWait = 0;
+                        roundCounter = 1;
+                        ExecuteJobs(ClientId);
+                    }
                 }
-                else
-                {
-                    totalWait = 0;
-                    roundCounter = 1;
-                    ExecuteJobs(ClientId);
-                }
-            } 
+            }
+            catch (Exception)
+            {
+                hasClient = false;
+            }
 
             try
             {
@@ -272,29 +267,31 @@ namespace PokeIn.Comet
             {
                 if (!Code.Run(code))
                 {
-                    SendToClient(ClientId, "PokeIn.CompilerError('" + CometWorker.Code.ErrorMessage + " :: " + BrowserHelper.SafeParameter(code) + "');");
+                    SendToClient(ClientId, "PokeIn.CompilerError('" + CometWorker.Code.ErrorMessage +"');");
                 }
             }
         }
         #endregion
 
+        #region CreateText
         static string CreateText(string clientId, string mess, bool _in)
         { 
             string clide = clientId.Substring(1, clientId.Length - 1);
             string []lst = new string[5] { ".", "(", ")", "{", "}"  };
             if (_in) {
                 mess = mess.Replace("\n", "\\n").Replace("\r","\\r");
-                for (var i = 0; i < 5; i++) {
+                for (int i = 0, lmt = lst.Length; i < lmt; i++) {
                     mess = mess.Replace(":" + clide + i.ToString() + ":", lst[i]);
                 }
             }
             else {
-                for (var i = 0; i < 5; i++) {
+                for (int i = 0, lmt = lst.Length; i < lmt; i++) {
                     mess = mess.Replace(lst[i], ":" + clide + i.ToString() + ":");
                 }
             } 
             return mess;
         }
+        #endregion
 
         #region Handlers
         public static void Handle(System.Web.UI.Page page)
@@ -310,7 +307,7 @@ namespace PokeIn.Comet
             else
             {
                 Send(page);
-            }
+            } 
         }
 
         public static void Send(System.Web.UI.Page page)
@@ -386,6 +383,14 @@ namespace PokeIn.Comet
                 {
                     lock (ClientStatus[clientId])
                     {
+                        if (ClientStatus[clientId].Worker == null)
+                        {
+                            RemoveClient(clientId);
+                            message = CreateText(clientId, "PokeIn.Closed();", false);
+                            page.Response.Write(message);
+                            return;
+                        }
+
                         ClientStatus[clientId].Worker.CodesToRun.Add(message); 
                         if (!cometEnabled)
                         {
@@ -513,9 +518,9 @@ namespace PokeIn.Comet
 
             UpdateUserTime(clientId, DateTime.Now.AddMilliseconds(-1 * (CometSettings.ListenerTimeout)));
         }
-        #endregion
+        #endregion 
 
-
+        #region SendToClient
         public static void SendToClient(string clientId, string message)
         {
             bool hasClient = false;
@@ -533,7 +538,9 @@ namespace PokeIn.Comet
                 }
             }
         }
+        #endregion
 
+        #region SendToAll
         public static void SendToAll(string message)
         {
             foreach (string clientId in Clients.Keys)
@@ -541,7 +548,9 @@ namespace PokeIn.Comet
                 SendToClient(clientId, message);
             }
         }
+        #endregion
 
+        #region GetClientIds
         public static string[] GetClientIds()
         {
             string[] clientIds = null;
@@ -552,7 +561,9 @@ namespace PokeIn.Comet
             }
             return clientIds;
         }
+        #endregion
 
+        #region SendToClients
         public static void SendToClients(string[] clientIds, string message)
         {
             for (int i = 0, lmt = clientIds.Length; i < lmt; i++)
@@ -560,7 +571,9 @@ namespace PokeIn.Comet
                 SendToClient(clientIds[i], message);
             }
         }
+        #endregion
 
+        #region GrabClientMessages
         static bool GrabClientMessages(string clientId, out string message)
         {
             bool hasClient = false;
@@ -572,29 +585,34 @@ namespace PokeIn.Comet
 
             if (hasClient)
             {
-                lock (Clients[clientId])
+                try
                 {
-                    Clients[clientId].PullMessages(out message);
+                    lock (Clients[clientId])
+                    {
+                        message = "";
+                        Clients[clientId].PullMessages(out message);
+                    }
+                    return true;
                 }
-                return true;
+                catch (Exception) { }//Thread Differences
             } 
             message = null;
             return false;
         }
+        #endregion
 
+        #region RemoveClient
         public static void RemoveClient(string clientId)
         {
             bool hasClient = false;
 
             lock (ClientStatus)
             {
-                hasClient = ClientStatus.ContainsKey(clientId);
-            }
+                hasClient = ClientStatus.ContainsKey(clientId); 
 
-            if (hasClient)
-            {
-                lock (ClientStatus[clientId])
+                if (hasClient)
                 {
+
                     try
                     {
                         ClientStatus[clientId].Worker._Thread.Abort();
@@ -610,37 +628,52 @@ namespace PokeIn.Comet
                         ClientStatus[clientId].Events.Clear();
                     }
                     catch (Exception) { }
-                    ClientStatus[clientId].Worker = null;
-                }
-                lock (ClientStatus)
-                {
+                    try
+                    {
+                        ClientStatus[clientId].Worker = null;
+                    }
+                    catch (Exception) { }
+
                     ClientStatus.Remove(clientId);
                 }
             }
 
+            bool inClients = false;
             lock (Clients)
             {
-                Clients.Remove(clientId);
-            }
-
-            List<string> lstKeys = new List<string>();
-            lock (PokeIn.DynamicCode.Definitions)
-            {
-                PokeIn.DynamicCode.Definitions.definedClasses.Remove(clientId);
-                foreach (string key in PokeIn.DynamicCode.Definitions.classObjects.Keys)
+                inClients = Clients.ContainsKey(clientId);
+                if (inClients)
                 {
-                    if (key.StartsWith(clientId + "."))
-                    {
-                        lstKeys.Add(key);
-                    }
+                    Clients.Remove(clientId);
                 }
-                foreach (string key in lstKeys)
-                    PokeIn.DynamicCode.Definitions.classObjects.Remove(key);
             }
 
-            lstKeys.Clear();
-        }
+            if (inClients && hasClient)
+            {
+                lock (PokeIn.DynamicCode.Definitions.definedClasses)
+                {
+                    List<string> lstKeys = new List<string>();
+                    lock (PokeIn.DynamicCode.Definitions)
+                    {
+                        PokeIn.DynamicCode.Definitions.definedClasses.Remove(clientId);
+                        foreach (string key in PokeIn.DynamicCode.Definitions.classObjects.Keys)
+                        {
+                            if (key.StartsWith(clientId + "."))
+                            {
+                                lstKeys.Add(key);
+                            }
+                        }
+                        foreach (string key in lstKeys)
+                            PokeIn.DynamicCode.Definitions.classObjects.Remove(key);
+                    }
 
+                    lstKeys.Clear();
+                }
+            }
+        }
+        #endregion
+
+        #region ClientLog
         public class ClientLog
         {
             public static string[] GetClientScriptLog(string clientId)
@@ -688,5 +721,6 @@ namespace PokeIn.Comet
                 }
             }
         }
+        #endregion
     }
 }

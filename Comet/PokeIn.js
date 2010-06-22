@@ -16,6 +16,8 @@ PokeIn.isOpera = /Opera/i.test(navigator.userAgent);
 PokeIn.isSafari = /Safari/i.test(navigator.userAgent);
 PokeIn.ForcePokeInAjax = false;
 PokeIn.CometEnabled = true;
+PokeIn.FormMethod = "POST";
+PokeIn.Secure = true;
 
 PokeIn.SetText = function (e, t) {
     if (e.innerText != null) {
@@ -140,7 +142,11 @@ PokeIn.Send = function (mess) {
         return;
     }
     PokeIn.Request++;
-    PokeIn.RequestList[PokeIn.Request] = { status: true, message: PokeIn.CreateText(mess, false), connector: PokeIn.CreateAjax(PokeIn.Request), is_send: true };
+    if (PokeIn.Secure) {
+        mess = PokeIn.CreateText(mess, false);
+    }
+
+    PokeIn.RequestList[PokeIn.Request] = { status: true, message: mess, connector: PokeIn.CreateAjax(PokeIn.Request), is_send: true };
     PokeIn._Send(PokeIn.Request);
 };
 
@@ -264,7 +270,7 @@ PokeIn._Send = function (call_id) {
     txt = txt.join('&');
     var xmlHttp = PokeIn.RequestList[call_id].connector;
 
-    xmlHttp.open('POST', _url, true);
+    xmlHttp.open(PokeIn.FormMethod, _url, true);
     xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
     xmlHttp.setRequestHeader('If-Modified-Since', 'Thu, 6 Mar 1980 00:00:00 GMT');
     xmlHttp.setRequestHeader('Connection', 'close');
@@ -273,7 +279,12 @@ PokeIn._Send = function (call_id) {
             PokeIn.RequestList[call_id].status = false;
             try {
                 if (xmlHttp.responseText != "") {
-                    eval(PokeIn.CreateText(xmlHttp.responseText, true));
+                    if (PokeIn.Secure) {
+                        eval(PokeIn.CreateText(xmlHttp.responseText, true));
+                    }
+                    else {
+                        eval(xmlHttp.responseText);
+                    }
                 }
             }
             catch (e) {

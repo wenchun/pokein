@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Comet Library (pokein.codeplex.com)
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 
 using System;
@@ -29,34 +29,13 @@ namespace PokeIn
         public SubMember()
         {
             parameterTypes = new List<Type>();
-            methodInfo = null;
-            propertyInfo = null;
-            fieldInfo = null;
-            isMethod = false;
-            isProperty = false;
-            isField = false;
-        }
-        public bool isMethod;
-        public bool isField;
-        public bool isProperty;
+            methodInfo = null;  
+        } 
         public List<Type> parameterTypes;
-        public System.Reflection.MethodInfo methodInfo;
-        public System.Reflection.FieldInfo fieldInfo;
-        public System.Reflection.PropertyInfo propertyInfo;
+        public System.Reflection.MethodInfo methodInfo; 
         public void SetMethod(System.Reflection.MethodInfo method)
         {
-            methodInfo = method;
-            isMethod = true;
-        }
-        public void SetField(System.Reflection.FieldInfo field)
-        {
-            fieldInfo = field;
-            isField = true;
-        }
-        public void SetProperty(System.Reflection.PropertyInfo property)
-        {
-            propertyInfo = property;
-            isProperty = true;
-        }
+            methodInfo = method; 
+        } 
     }
 }

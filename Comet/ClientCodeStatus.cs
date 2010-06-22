@@ -24,9 +24,9 @@ using System.Web;
 
 namespace PokeIn.Comet
 {
-    public class ClientCodeStatus
+    public class ClientCodeStatus 
     {
-        public ClientCodeStatus(ref CometWorker worker)
+        public ClientCodeStatus(CometWorker worker)
         {
             Events = new Dictionary<string, BrowserHelper.ClientElementEventReceived>();
             Online = DateTime.Now;
@@ -35,6 +35,6 @@ namespace PokeIn.Comet
         
         public DateTime Online;
         public CometWorker Worker;
-        public Dictionary<string, BrowserHelper.ClientElementEventReceived> Events;
+        public Dictionary<string, BrowserHelper.ClientElementEventReceived> Events; 
     }
 }
