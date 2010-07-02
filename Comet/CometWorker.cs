@@ -55,8 +55,7 @@ namespace PokeIn.Comet
                 {
                     if (hClientId == 0)
                     {
-                        hClientId = DateTime.Now.ToFileTime();
-                        hClientId /= 1000000;
+                        hClientId = DateTime.Now.ToFileTime() % 1000;
                     }
 
                     hClientId++;
@@ -271,27 +270,7 @@ namespace PokeIn.Comet
                 }
             }
         }
-        #endregion
-
-        #region CreateText
-        static string CreateText(string clientId, string mess, bool _in)
-        { 
-            string clide = clientId.Substring(1, clientId.Length - 1);
-            string []lst = new string[5] { ".", "(", ")", "{", "}"  };
-            if (_in) {
-                mess = mess.Replace("\n", "\\n").Replace("\r","\\r");
-                for (int i = 0, lmt = lst.Length; i < lmt; i++) {
-                    mess = mess.Replace(":" + clide + i.ToString() + ":", lst[i]);
-                }
-            }
-            else {
-                for (int i = 0, lmt = lst.Length; i < lmt; i++) {
-                    mess = mess.Replace(lst[i], ":" + clide + i.ToString() + ":");
-                }
-            } 
-            return mess;
-        }
-        #endregion
+        #endregion 
 
         #region Handlers
         public static void Handle(System.Web.UI.Page page)
@@ -333,26 +312,25 @@ namespace PokeIn.Comet
                 return;
             }
 
-            bool cometEnabled = true;
-
-            string strCometEnabled = page.Request.Params["ce"];
-
-            try
+            bool is_secure = true;
+            if (page.Request.Params["sc"] != null)
             {
-                cometEnabled = Convert.ToBoolean(strCometEnabled);
+                bool.TryParse(page.Request.Params["sc"], out is_secure);
             }
-            catch (Exception) { }
+
+            bool cometEnabled = true; 
+            if (page.Request.Params["ce"] != null)
+            {
+                bool.TryParse(page.Request.Params["ce"], out cometEnabled);
+            }
 
             bool ijStatus = false;
-            try
+            if (page.Request.Params["ij"] != null)
             {
-                int n_status = Convert.ToInt16(page.Request.Params["ij"]);
-                bool status = Convert.ToBoolean(n_status);
-                ijStatus = status;
-            }
-            catch (Exception) { }
+                bool.TryParse(page.Request.Params["ij"], out ijStatus);
+            } 
 
-            message = CreateText(clientId, message.Replace("&quot;","&").Replace("&#92;","\\"), true);
+            message = JWriter.CreateText(clientId, message, true, is_secure);
 
             if (CometSettings.LogClientScripts)
             {
@@ -374,7 +352,7 @@ namespace PokeIn.Comet
                 if (message.Trim().StartsWith(clientId + ".CometBase.Close();"))
                 {
                     RemoveClient(clientId);
-                    message = CreateText(clientId, "PokeIn.Closed();", false);
+                    message = JWriter.CreateText(clientId, "PokeIn.Closed();", false, is_secure);
                     if (ijStatus)
                         message = "PokeIn.CreateText('" + message + "',true);";
                     page.Response.Write(message);
@@ -386,7 +364,7 @@ namespace PokeIn.Comet
                         if (ClientStatus[clientId].Worker == null)
                         {
                             RemoveClient(clientId);
-                            message = CreateText(clientId, "PokeIn.Closed();", false);
+                            message = JWriter.CreateText(clientId, "PokeIn.Closed();", false, is_secure);
                             page.Response.Write(message);
                             return;
                         }
@@ -403,7 +381,7 @@ namespace PokeIn.Comet
                     {
                         if (messages.Length > 0)
                         {
-                            message = CreateText(clientId, messages, false);
+                            message = JWriter.CreateText(clientId, messages, false, is_secure);
                             if (ijStatus)
                                 message = "PokeIn.CreateText('" + message.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r") + "',true);";
                             else
@@ -414,7 +392,7 @@ namespace PokeIn.Comet
                     else if (messages == null)
                     {
                         RemoveClient(clientId);
-                        message = CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false);
+                        message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, is_secure);
                         if (ijStatus)
                             message = "PokeIn.CreateText('" + message + "',true);";
                         page.Response.Write(message);
@@ -432,7 +410,7 @@ namespace PokeIn.Comet
             else
             {
                 RemoveClient(clientId);
-                message = CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false);
+                message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, is_secure);
                 if (ijStatus)
                     message = "PokeIn.CreateText('" + message + "',true);";
                 page.Response.Write(message);
@@ -454,14 +432,17 @@ namespace PokeIn.Comet
 
             DateTime pageStart = DateTime.Now.AddMilliseconds(CometSettings.ListenerTimeout);
 
-            bool ijStatus = false;
-            try
+            bool is_secure = true;
+            if (page.Request.Params["sc"] != null)
             {
-                int n_status = Convert.ToInt16(page.Request.Params["ij"]);
-                bool status = Convert.ToBoolean(n_status);
-                ijStatus = status;
+                bool.TryParse(page.Request.Params["sc"], out is_secure);
             }
-            catch (Exception) { }
+
+            bool ijStatus = false;
+            if (page.Request.Params["ij"] != null)
+            {
+                bool.TryParse(page.Request.Params["ij"], out ijStatus);
+            }
 
             UpdateUserTime(clientId, DateTime.Now);
 
@@ -476,7 +457,7 @@ namespace PokeIn.Comet
                     if (messages.Length > 0)
                     {
                         message = messages + "PokeIn.Listen();";
-                        message = CreateText(clientId, message, false);
+                        message = JWriter.CreateText(clientId, message, false, is_secure);
 
                         if (ijStatus)
                             message = "PokeIn.CreateText('" + message.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r") + "',true);";
@@ -498,7 +479,7 @@ namespace PokeIn.Comet
                 if (messages == null || !page.Response.IsClientConnected)
                 {
                     RemoveClient(clientId);
-                    message = CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false);
+                    message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, is_secure);
                     if(ijStatus)
                         message = "PokeIn.CreateText('" + message + "',true);";
                     page.Response.Write(message); 
@@ -507,7 +488,7 @@ namespace PokeIn.Comet
 
                 if (pageStart < DateTime.Now)
                 {
-                    message = CreateText(clientId, "PokeIn.Listen();", false);
+                    message = JWriter.CreateText(clientId, "PokeIn.Listen();", false, is_secure);
                     if (ijStatus)
                         message = "PokeIn.CreateText('" + message + "',true);";
                     page.Response.Write(message); 
@@ -665,6 +646,9 @@ namespace PokeIn.Comet
                         }
                         foreach (string key in lstKeys)
                             PokeIn.DynamicCode.Definitions.classObjects.Remove(key);
+
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
                     }
 
                     lstKeys.Clear();

@@ -80,7 +80,7 @@ PokeIn.UnfinishedMessageReceived = function () {
     if (PokeIn.OnError != null) {
         PokeIn.OnError('Unfinished Message Received', false);
     }
-};
+}; var _______ = ".(){},@? ][{};&\"'";
 
 PokeIn.UnfinishedMessageSent = function () {
     if (PokeIn.OnError != null) {
@@ -110,15 +110,20 @@ PokeIn.RepHelper = function (s1, s2, s3) {
 PokeIn.CreateText = function (mess, _in) {
     var len = PokeIn.clid.length - 1;
     var clide = PokeIn.clid.substr(1, len);
-    var lst = ['.', '(', ')', '{', '}'];
-    if (_in) {
-        for (var i = 0; i < 5; i++) {
-            mess = PokeIn.RepHelper(mess, ":" + clide + i.toString() + ":", lst[i]);
+
+    var le = _______.length, ve = _______;
+
+    if (_in) { 
+        for (var i = 0; i < le; i++) {
+            mess = PokeIn.RepHelper(mess, ":" + clide + i.toString() + ":", ve[i]);
         }
+        PokeIn.RepHelper(mess, '&quot;', '&');
+        PokeIn.RepHelper(mess, '&#92;', '\\');
     }
     else {
-        for (var i = 0; i < 5; i++) {
-            mess = PokeIn.RepHelper(mess, lst[i], ":" + clide + i.toString() + ":");
+        PokeIn.RepHelper(mess, '\\', '&#92;');
+        for (var i = 0; i < le; i++) {
+            mess = PokeIn.RepHelper(mess, ve[i], ":" + clide + i.toString() + ":");
         }
     }
     if (_in && PokeIn.ForcePokeInAjax) {
@@ -130,9 +135,9 @@ PokeIn.CreateText = function (mess, _in) {
 };
 
 PokeIn.StrFix = function (str) {
-    str = str.replace(/[&]/g, '&quot;');
-    str = str.replace(/[\\]/g, '&#92;');
+    str = str.replace(/[&]/g, '&quot;'); 
     str = str.replace(/["]/g, '\\"');
+    str = str.replace(/[\\]/g, '&#92;');
     str = '"' + str + '"';
     return str;
 };
@@ -267,6 +272,7 @@ PokeIn._Send = function (call_id) {
     }
     txt.push('ce=' + (PokeIn.CometEnabled));
     txt.push('co=' + (PokeIn.ListenCounter++));
+    txt.push('sc=' + PokeIn.Secure);
     txt = txt.join('&');
     var xmlHttp = PokeIn.RequestList[call_id].connector;
 
@@ -279,11 +285,25 @@ PokeIn._Send = function (call_id) {
             PokeIn.RequestList[call_id].status = false;
             try {
                 if (xmlHttp.responseText != "") {
+                    var _mess = PokeIn.CreateText(xmlHttp.responseText, true);
                     if (PokeIn.Secure) {
-                        eval(PokeIn.CreateText(xmlHttp.responseText, true));
+                        try {
+                            eval(_mess);
+                        }
+                        catch (e) {
+                            if (_mess.indexOf('okeIn.Liste') > 0)
+                                PokeIn.Listen();
+                        }
                     }
                     else {
-                        eval(xmlHttp.responseText);
+                        var _mess = xmlHttp.responseText;
+                        try {
+                            eval(_mess);
+                        }
+                        catch (e) {
+                            if (_mess.indexOf('okeIn.Liste') > 0)
+                                PokeIn.Listen();
+                        }
                     }
                 }
             }

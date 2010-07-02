@@ -77,9 +77,10 @@ namespace PokeIn.Comet
                                             + SimpleName + ");}"+"\nc3eb();\n");
         }
 
+        //deprecated
         public static string SafeParameter(string message)
         {
-            return message.Replace("'", "\\\\\'").Replace("\"", "\\\\\"");
+            return message;
         }
     }
 }

@@ -40,7 +40,7 @@ namespace PokeIn.Comet
                 Js = Js.Replace("\r\n", "");  
                 Js = Js.Replace("   ", ""); 
 
-                string[] obfs = new string[] { "_callback_", "_Send", "ListenUrl", "SendUrl", "XMLString", "js_class", "RequestList", "ListenCounter", "RepHelper", "connector", "call_id" };
+                string[] obfs = new string[] { "_callback_", "_Send", "ListenUrl", "SendUrl", "XMLString", "js_class", "RequestList", "ListenCounter", "RepHelper", "connector", "call_id", "CreateText" };
                 int counter = 0;
                 foreach (string obf in obfs)
                     Js = Js.Replace(obf, "_"+(counter++).ToString());
@@ -63,6 +63,54 @@ namespace PokeIn.Comet
             }
 
             page.Response.Write("<script>\n" + clientJs + "\n" + PokeIn.DynamicCode.Definitions.JSON + "</script>");
+        }
+
+        public static string CreateText(string clientId, string mess, bool _in, bool is_secure)
+        {
+            if (is_secure)
+                return CreateText(clientId, mess, _in);
+            else
+            {
+                if (_in)
+                {
+                    mess = mess.Replace("&quot;", "&");
+                    mess = mess.Replace("&#92;", "\\");
+                    mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
+                }
+                else
+                {
+                    mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
+                    mess = mess.Replace("\\", "&#92;");
+                }
+                return mess;
+            }
+        }
+
+        static string definitions = ".(){},@? ][{};&\"'";
+        static string CreateText(string clientId, string mess, bool _in)
+        {
+            string clide = clientId.Substring(1, clientId.Length - 1);
+            if (_in)
+            {
+                for (int i = 0, lmt = definitions.Length; i < lmt; i++)
+                {
+                    mess = mess.Replace(":" + clide + i.ToString() + ":", definitions[i].ToString());
+                }
+                mess = mess.Replace("&quot;", "&");
+                mess = mess.Replace("&#92;", "\\");
+                mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
+            }
+            else
+            {
+                mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
+                mess = mess.Replace("\\", "&#92;");
+                for (int i = 0, lmt = definitions.Length; i < lmt; i++)
+                {
+                    mess = mess.Replace(definitions[i].ToString(), ":" + clide + i.ToString() + ":");
+                }
+            }
+            return mess;
+
         }
     }
 }
