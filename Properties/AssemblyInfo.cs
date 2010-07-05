@@ -15,7 +15,7 @@
 
  * 
  * PokeIn Library
- * Copyright © 2010 http://pokein.codeplex.com (info@pokein.com)
+ * Copyright © 2010 Oguz Bastemur. http://pokein.codeplex.com (info@pokein.com)
  */
 
 using System.Reflection;
@@ -33,5 +33,5 @@ using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
 [assembly: Guid("7a67cc67-b65e-47ca-84f0-00a90af5524b")]
-[assembly: AssemblyVersion("0.8.3.0")]
-[assembly: AssemblyFileVersion("0.8.3.0")]
+[assembly: AssemblyVersion("0.8.4.0")]
+[assembly: AssemblyFileVersion("0.8.4.0")]

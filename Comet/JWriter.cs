@@ -40,7 +40,7 @@ namespace PokeIn.Comet
                 Js = Js.Replace("\r\n", "");  
                 Js = Js.Replace("   ", ""); 
 
-                string[] obfs = new string[] { "_callback_", "_Send", "ListenUrl", "SendUrl", "XMLString", "js_class", "RequestList", "ListenCounter", "RepHelper", "connector", "call_id", "CreateText" };
+                string[] obfs = new string[] { "_callback_", "_Send", "ListenUrl", "SendUrl", "XMLString", "js_class", "RequestList", "ListenCounter", "RepHelper", "connector", "call_id" };
                 int counter = 0;
                 foreach (string obf in obfs)
                     Js = Js.Replace(obf, "_"+(counter++).ToString());
@@ -86,7 +86,7 @@ namespace PokeIn.Comet
             }
         }
 
-        static string definitions = ".(){},@? ][{};&\"'";
+        static string definitions = ".(){},@? ][{};&\"'#";
         static string CreateText(string clientId, string mess, bool _in)
         {
             string clide = clientId.Substring(1, clientId.Length - 1);

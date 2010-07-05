@@ -29,22 +29,12 @@ namespace PokeIn.Comet
     public class CometWorker
     {
         #region Members
-        static PokeIn.DynamicCode Code = null;
+        static PokeIn.DynamicCode Code = new PokeIn.DynamicCode();
         static Dictionary<string, CometMessage> Clients = new Dictionary<string, CometMessage>();
         static Dictionary<string, List<string>> ClientScriptsLog = new Dictionary<string, List<string>>();
         public static Dictionary<string, ClientCodeStatus> ClientStatus = new Dictionary<string, ClientCodeStatus>();
         static long hClientId = 0;
-        #endregion
-
-        #region will_be_removed
-        static void CheckStaticCreations()
-        {
-            if (Code == null)
-            {
-                Code = new PokeIn.DynamicCode();
-            }
-        }
-        #endregion
+        #endregion 
 
         #region NewClientId
         static string NewClientId
@@ -101,9 +91,7 @@ namespace PokeIn.Comet
          
         public static bool Bind(string listenUrl, string sendUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId, bool CometEnabled)
         {  
-            clientId = NewClientId;
-
-            CheckStaticCreations();
+            clientId = NewClientId; 
 
             lock (Clients)
             {
@@ -147,10 +135,13 @@ namespace PokeIn.Comet
             {
                 ClientStatus.Add(clientId, new ClientCodeStatus(worker));
 
+                //Oguz Bastemur
+                //to-do::smart threads through the core units
                 if (CometEnabled)
                 {
                     System.Threading.ThreadStart Ts = new System.Threading.ThreadStart(ClientStatus[clientId].Worker.ClientThread);
                     ClientStatus[clientId].Worker._Thread = new System.Threading.Thread(Ts);
+                    ClientStatus[clientId].Worker._Thread.SetApartmentState(System.Threading.ApartmentState.MTA);
                     ClientStatus[clientId].Worker._Thread.Start();
                 }
             } 
@@ -327,7 +318,7 @@ namespace PokeIn.Comet
             bool ijStatus = false;
             if (page.Request.Params["ij"] != null)
             {
-                bool.TryParse(page.Request.Params["ij"], out ijStatus);
+                ijStatus = page.Request.Params["ij"].ToString() == "1";
             } 
 
             message = JWriter.CreateText(clientId, message, true, is_secure);
@@ -441,7 +432,7 @@ namespace PokeIn.Comet
             bool ijStatus = false;
             if (page.Request.Params["ij"] != null)
             {
-                bool.TryParse(page.Request.Params["ij"], out ijStatus);
+                ijStatus = page.Request.Params["ij"].ToString() == "1";
             }
 
             UpdateUserTime(clientId, DateTime.Now);

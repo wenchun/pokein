@@ -18,6 +18,7 @@ PokeIn.ForcePokeInAjax = false;
 PokeIn.CometEnabled = true;
 PokeIn.FormMethod = "POST";
 PokeIn.Secure = true;
+PokeIn.ListenActive = false;
 
 PokeIn.SetText = function (e, t) {
     if (e.innerText != null) {
@@ -71,6 +72,7 @@ PokeIn.Listen = function () {
     if (!PokeIn.IsConnected) {
         return;
     }
+    PokeIn.ListenActive = true;
     PokeIn.Request++;
     PokeIn.RequestList[PokeIn.Request] = { status: true, message: "", connector: PokeIn.CreateAjax(PokeIn.Request), is_send: false };
     PokeIn._Send(PokeIn.Request);
@@ -80,7 +82,7 @@ PokeIn.UnfinishedMessageReceived = function () {
     if (PokeIn.OnError != null) {
         PokeIn.OnError('Unfinished Message Received', false);
     }
-}; var _______ = ".(){},@? ][{};&\"'";
+}; var _______ = ".(){},@? ][{};&\"'#";
 
 PokeIn.UnfinishedMessageSent = function () {
     if (PokeIn.OnError != null) {
@@ -284,30 +286,19 @@ PokeIn._Send = function (call_id) {
         if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
             PokeIn.RequestList[call_id].status = false;
             try {
-                if (xmlHttp.responseText != "") {
-                    var _mess = PokeIn.CreateText(xmlHttp.responseText, true);
-                    if (PokeIn.Secure) {
-                        try {
-                            eval(_mess);
-                        }
-                        catch (e) {
-                            if (_mess.indexOf('okeIn.Liste') > 0)
-                                PokeIn.Listen();
-                        }
+                if (xmlHttp.responseText != "") { 
+                    if (PokeIn.Secure) { 
+                        eval(PokeIn.CreateText(xmlHttp.responseText, true)); 
                     }
-                    else {
-                        var _mess = xmlHttp.responseText;
-                        try {
-                            eval(_mess);
-                        }
-                        catch (e) {
-                            if (_mess.indexOf('okeIn.Liste') > 0)
-                                PokeIn.Listen();
-                        }
-                    }
+                    else { 
+                        eval(xmlHttp.responseText); 
+                    } 
                 }
             }
             catch (e) {
+                if (!PokeIn.ListenActive) {
+                    PokeIn.Listen();
+                }
                 if (PokeIn.OnError != null) {
                     PokeIn.OnError('Ajax Error: ' + xmlHttp.responseText, true);
                     return;
