@@ -20,7 +20,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace PokeIn
 {
@@ -28,14 +27,14 @@ namespace PokeIn
     {
         public SubMember()
         {
-            parameterTypes = new List<Type>();
-            methodInfo = null;  
+            ParameterTypes = new List<Type>();
+            MethodInfo = null;  
         } 
-        public List<Type> parameterTypes;
-        public System.Reflection.MethodInfo methodInfo; 
+        public List<Type> ParameterTypes;
+        public System.Reflection.MethodInfo MethodInfo; 
         public void SetMethod(System.Reflection.MethodInfo method)
         {
-            methodInfo = method; 
+            MethodInfo = method; 
         } 
     }
 }

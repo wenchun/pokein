@@ -20,7 +20,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PokeIn
@@ -38,32 +37,32 @@ namespace PokeIn
         { 
             List<object> parameterList = new List<object>();
 
-            string ParameterError = "";
+            string parameterError = "";
             if (param.Length > 0)
             {
-                string[] param_list = param.Split(',');
+                string[] paramList = param.Split(',');
 
-                SubMember func = null;
-                Definitions.classMembers.TryGetValue(methodClass, out func);
+                SubMember func;
+                Definitions.ClassMembers.TryGetValue(methodClass, out func);
 
                 int pos = 0;
-                while (pos < param_list.Length)
+                while (pos < paramList.Length)
                 {
-                    string sub_p = param_list[pos].Trim();
-                    if (sub_p.StartsWith("\""))
+                    string subP = paramList[pos].Trim();
+                    if (subP.StartsWith("\""))
                     {
-                        if (!sub_p.EndsWith("\""))
+                        if (!subP.EndsWith("\""))
                         {
-                            sub_p = param_list[pos];
-                            while (pos + 1 < param_list.Length && !sub_p.EndsWith("\""))
+                            subP = paramList[pos];
+                            while (pos + 1 < paramList.Length && !subP.EndsWith("\""))
                             {
-                                sub_p += "," + param_list[++pos];
+                                subP += "," + paramList[++pos];
                             }
-                            sub_p = sub_p.Trim();
+                            subP = subP.Trim();
                         }
-                        if (sub_p.Length > 2)
+                        if (subP.Length > 2)
                         {
-                            parameterList.Add(sub_p.Substring(1, sub_p.Length - 2));
+                            parameterList.Add(subP.Substring(1, subP.Length - 2));
                         }
                         else
                         {
@@ -72,17 +71,17 @@ namespace PokeIn
                         pos++;
                         continue;
                     }
-                    if (sub_p == "'")
+                    if (subP == "'")
                     {
                         pos += 2;
                         parameterList.Add(',');
                         continue;
                     }
-                    if (sub_p.StartsWith("'") && sub_p.EndsWith("'"))
+                    if (subP.StartsWith("'") && subP.EndsWith("'"))
                     {
-                        if (sub_p.Length > 2)
+                        if (subP.Length > 2)
                         {
-                            parameterList.Add(sub_p.ToCharArray()[1]);
+                            parameterList.Add(subP.ToCharArray()[1]);
                         }
                         else
                         {
@@ -92,47 +91,47 @@ namespace PokeIn
                         continue;
                     } 
 
-                    if (func.parameterTypes.Count > parameterList.Count)
+                    if (func.ParameterTypes.Count > parameterList.Count)
                     {
                         try
                         {
-                            parameterList.Add(Convert.ChangeType(sub_p, func.parameterTypes[parameterList.Count]));
+                            parameterList.Add(Convert.ChangeType(subP, func.ParameterTypes[parameterList.Count]));
                         }
                         catch (Exception e)
                         {
-                            ParameterError += e.Message + " | ";
+                            parameterError += e.Message + " | ";
                         }
                         pos++;
                         continue;
                     }
 
-                    parameterList.Add(sub_p);
+                    parameterList.Add(subP);
                     pos++;
                 }
             }
-            if (ParameterError.Length > 0)
+            if (parameterError.Length > 0)
             {
-                throw new System.Exception(ParameterError);
+                throw new Exception(parameterError);
             }
             return parameterList.ToArray();   
         }
 
-        private string errorMessage;
+        private string _errorMessage;
         public string ErrorMessage
         {
             get
             {
-                return errorMessage;
+                return _errorMessage;
             }
         }
 
-        public bool Run(string call_string)
+        public bool Run(string callString)
         {
-            string[] safe_methods = call_string.Split('\r');
+            string[] safeMethods = callString.Split('\r');
 
-            foreach (string stringToCall in safe_methods)
+            foreach (string stringToCall in safeMethods)
             {
-                errorMessage = "";
+                _errorMessage = "";
                 Regex methods = new Regex(@"(?<Client>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot1>[\.]{1})(?<Class>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<dot2>[\.]{1})(?<Function>[a-zA-Z]{1}[a-zA-Z0-9]{0,})(?<lp>[(]{1})(?<Params>.{0,})(?<rp>[)]{1}[;]?)");
                 MatchCollection mcMethods = methods.Matches(stringToCall);
 
@@ -147,29 +146,27 @@ namespace PokeIn
                     string methodName = mcMethods[i].Groups["Function"].Value.Trim();
                     string param = mcMethods[i].Groups["Params"].Value.Trim();
 
-                    object[] paramList = this.ParseFunctionParams(className + "." + methodName, param);
+                    object[] paramList = ParseFunctionParams(className + "." + methodName, param);
 
-                    object defined_class = null;
+                    object definedClass;
                     SubMember func = null;
 
-                    Definitions.classObjects.TryGetValue(clientName + "." + className, out defined_class);
+                    Definitions.ClassObjects.TryGetValue(clientName + "." + className, out definedClass);
 
-                    if (defined_class != null)
+                    if (definedClass != null)
                     {
-                        Definitions.classMembers.TryGetValue(className + "." + methodName, out func);
+                        Definitions.ClassMembers.TryGetValue(className + "." + methodName, out func);
                     }
 
                     try
                     {
-                        func.methodInfo.Invoke(defined_class, paramList);
+                        func.MethodInfo.Invoke(definedClass, paramList);
                     }
-                    catch (System.Exception e)
+                    catch (Exception e)
                     {
-                        errorMessage = e.Message;
+                        _errorMessage = e.Message;
                         return false;
                     }
-
-                    paramList = null;
                 }
             }
             return true;

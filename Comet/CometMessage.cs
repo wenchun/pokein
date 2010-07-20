@@ -17,45 +17,39 @@
  * PokeIn Comet Library (pokein.codeplex.com)
  * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Web;
 
 namespace PokeIn.Comet
 {
     internal class CometMessage
     {
-        List<string> Messages;
-        string ClientId;
+        List<string> _messages;
 
-        public CometMessage(string clientId)
+        public CometMessage()
         {
-            Messages = new List<string>();
-            ClientId = clientId; 
+            _messages = new List<string>();
         }
-        public CometMessage(string message, string clientId)
+
+        public CometMessage(string message)
         {
-            Messages = new List<string>();
-            ClientId = clientId;
-            Messages.Add(message); 
+            _messages = new List<string> {message};
         }
 
         public void PushMessage(string message)
         {
-            lock (Messages)
+            lock (_messages)
             {
-                Messages.Add(message);
+                _messages.Add(message);
             }
         }
         public void PullMessages(out string message)
         {
             message = "";
-            lock(Messages)
+            lock(_messages)
             { 
-                foreach (string m in Messages)
+                foreach (string m in _messages)
                     message += m+";"; 
-                Messages.Clear(); 
+                _messages.Clear(); 
             } 
         } 
     }

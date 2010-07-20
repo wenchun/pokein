@@ -1,4 +1,4 @@
-﻿/** PokeIn Comet Library (pokein.codeplex.com) (GPL v2) Copyright © 2010 Oguz Bastemur (info@pokein.com)*/
+﻿/**PokeIn Comet Ajax Library 0.86 (pokein.codeplex.com) (GPL v2) Copyright © 2010 Oguz Bastemur (info@pokein.com)*/
 function PokeIn() {
 }
 
@@ -117,15 +117,15 @@ PokeIn.CreateText = function (mess, _in) {
 
     if (_in) { 
         for (var i = 0; i < le; i++) {
-            mess = PokeIn.RepHelper(mess, ":" + clide + i.toString() + ":", ve[i]);
+            mess = PokeIn.RepHelper(mess, ":" + clide + i.toString() + ":", ve.charAt(i));
         }
-        PokeIn.RepHelper(mess, '&quot;', '&');
-        PokeIn.RepHelper(mess, '&#92;', '\\');
+        mess = PokeIn.RepHelper(mess, '&quot;', '&');
+        mess = PokeIn.RepHelper(mess, '&#92;', '\\');
     }
     else {
-        PokeIn.RepHelper(mess, '\\', '&#92;');
+        mess = PokeIn.RepHelper(mess, '\\', '&#92;');
         for (var i = 0; i < le; i++) {
-            mess = PokeIn.RepHelper(mess, ve[i], ":" + clide + i.toString() + ":");
+            mess = PokeIn.RepHelper(mess, ve.charAt(i), ":" + clide + i.toString() + ":");
         }
     }
     if (_in && PokeIn.ForcePokeInAjax) {

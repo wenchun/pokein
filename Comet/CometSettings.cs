@@ -17,37 +17,49 @@
  * PokeIn Comet Library (pokein.codeplex.com)
  * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace PokeIn.Comet
 {
     public class CometSettings
     { 
-        static int listenerTimeout = 30000;
+        static int _listenerTimeout = 30000;
+        /// <summary>
+        /// Gets or sets the Listener Timeout. (Lifetime of every listener calls - Long pooling timeout)
+        /// </summary>
+        /// <value>The listener timeout.</value>
         public static int ListenerTimeout
         {
-            set { listenerTimeout = value; }
-            get { return listenerTimeout; }
+            set { _listenerTimeout = value; }
+            get { return _listenerTimeout; }
         }
-        static int clientTimeout = 180000; //180 secs
+        static int _clientTimeout = 180000; //180 secs
+        /// <summary>
+        /// Gets or sets the client timeout. Assign 0 to disable timeout
+        /// </summary>
+        /// <value>The client timeout.</value>
         public static int ClientTimeout
         {
-            set { clientTimeout = value; }
-            get { return clientTimeout; }
+            set { _clientTimeout = value; }
+            get { return _clientTimeout; }
         }
-        static int connectionLostTimeout = 45000; //45 secs
+        static int _connectionLostTimeout = 5000; //5 secs 
+        /// <summary>
+        /// Gets or sets the connection lost timeout. (Maximum time between the two listener calls)
+        /// </summary>
+        /// <value>The connection lost timeout.</value>
         public static int ConnectionLostTimeout
         {
-            set { connectionLostTimeout = value; }
-            get { return connectionLostTimeout; }
+            set { _connectionLostTimeout = value; }
+            get { return _connectionLostTimeout; }
         }
-        static bool logClientScripts = false;
+        static bool _logClientScripts;
+        /// <summary>
+        /// Gets or sets a value indicating whether [log client scripts].
+        /// </summary>
+        /// <value><c>true</c> if [log client scripts]; otherwise, <c>false</c>.</value>
         public static bool LogClientScripts
         {
-            set { logClientScripts = value; }
-            get { return logClientScripts; }
+            set { _logClientScripts = value; }
+            get { return _logClientScripts; }
         }
     }
 }

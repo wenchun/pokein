@@ -26,54 +26,54 @@ namespace PokeIn
 {
     internal class Definition
     {
-        public List<string> definedClasses;
-        public Dictionary<string, object> classObjects;
-        public Dictionary<string, SubMember> classMembers;
-        private string json;
+        public List<string> DefinedClasses;
+        public Dictionary<string, object> ClassObjects;
+        public Dictionary<string, SubMember> ClassMembers;
+        private string _json;
 
         public string JSON
         {
-            get { return json; }
+            get { return _json; }
         }
 
         public Definition()
         {
-            definedClasses = new List<string>();
-            classObjects = new Dictionary<string, object>();
-            classMembers = new Dictionary<string, SubMember>();
-            json = "";
+            DefinedClasses = new List<string>();
+            ClassObjects = new Dictionary<string, object>();
+            ClassMembers = new Dictionary<string, SubMember>();
+            _json = "";
         }
 
-        public void Add(string ClassName, ref object DefinedObject, string InstanceName)
+        public void Add(string className, ref object definedObject, string instanceName)
         {
-            if (definedClasses.Contains(ClassName))
+            if (DefinedClasses.Contains(className))
             {
-                if (!classObjects.ContainsKey(InstanceName + "." + ClassName))
+                if (!ClassObjects.ContainsKey(instanceName + "." + className))
                 {
-                    classObjects.Add(InstanceName + "." + ClassName, DefinedObject);
+                    ClassObjects.Add(instanceName + "." + className, definedObject);
                 }
                 return;
             }
 
-            definedClasses.Add(ClassName);
+            DefinedClasses.Add(className);
 
-            Type t = DefinedObject.GetType();
+            Type t = definedObject.GetType();
 
-            classObjects[InstanceName + "." + ClassName] = DefinedObject;
+            ClassObjects[instanceName + "." + className] = definedObject;
             System.Reflection.MethodInfo[] methods = t.GetMethods();
 
-            bool enable_pokein_safety = false;
+            bool enablePokeinSafety = false;
             
             System.Reflection.FieldInfo fi = t.GetField("PokeInSafe") ;
             if (fi != null)
             {
-                enable_pokein_safety = Convert.ToBoolean( fi.GetValue(DefinedObject) );
+                enablePokeinSafety = Convert.ToBoolean( fi.GetValue(definedObject) );
             }
 
             StringBuilder sbJson = new StringBuilder();
 
             sbJson.Append("function ");
-            sbJson.Append(ClassName);
+            sbJson.Append(className);
             sbJson.Append("(){}"); 
 
             for (int i = 0, ml = methods.Length; i < ml; i++)
@@ -84,37 +84,37 @@ namespace PokeIn
                 if (methods[i].ReturnParameter.ParameterType != typeof(void))
                     continue;
 
-                if (enable_pokein_safety)
+                if (enablePokeinSafety)
                 {
                     if (!methods[i].Name.StartsWith("__"))
                         continue;
                 }
 
                 System.Reflection.ParameterInfo[] paramz = methods[i].GetParameters();
-                bool is_compatible = true;
+                bool isCompatible = true;
                 foreach (System.Reflection.ParameterInfo param in paramz)
                 {
                     if (!param.ParameterType.IsSerializable)
                     {
-                        is_compatible = false;
+                        isCompatible = false;
                         break;
                     }
-                    else if (param.ParameterType == typeof(System.EventArgs) )
+                    if (param.ParameterType == typeof(EventArgs) )
                     {
-                        is_compatible = false;
+                        isCompatible = false;
                         break;
                     }
                 }
-                if (!is_compatible)
+                if (!isCompatible)
                     continue;
 
                 SubMember sm = new SubMember();
-                string completeName = ClassName + "." + methods[i].Name;
+                string completeName = className + "." + methods[i].Name;
 
                 sbJson.Append(completeName);
                 sbJson.Append("=function(");
 
-                bool is_first = true;
+                bool isFirst = true;
                 
                 List<string> stringList = new List<string>();
                 List<string> letterList = new List<string>();
@@ -124,22 +124,22 @@ namespace PokeIn
 
                 foreach (System.Reflection.ParameterInfo param in paramz)
                 {
-                    if(!is_first)
+                    if(!isFirst)
                     {
                         letterz.Append(",");
                     }
                     
-                    sm.parameterTypes.Add(param.ParameterType);
+                    sm.ParameterTypes.Add(param.ParameterType);
                     string paramName = "a"+(indexer).ToString();
                     letterz.Append(paramName);
 
-                    if (param.ParameterType == typeof(System.String))
+                    if (param.ParameterType == typeof(String))
                     {
                         stringList.Add(paramName + "=PokeIn.StrFix(" + paramName + ");");
                     }
                     letterList.Add(paramName);
 
-                    is_first = false;
+                    isFirst = false;
                     indexer++;
                 }
                 sbJson.Append(letterz.ToString(0,letterz.Length));
@@ -151,29 +151,29 @@ namespace PokeIn
                 sbJson.Append("PokeIn.Send(PokeIn.GetClientId() + \".");
                 sbJson.Append(completeName + "(");
 
-                is_first = true;
+                isFirst = true;
                 foreach (string strLetter in letterList)
                 {
-                    if(!is_first)
+                    if(!isFirst)
                     {
                         sbJson.Append( "+\"," );
                     }
                     sbJson.Append( "\"+" + strLetter );
-                    is_first = false;
+                    isFirst = false;
                 }
-                if (!is_first)
+                if (!isFirst)
                 {
                     sbJson.Append( "+\"" );
                 }
                 sbJson.Append( ");\");}\n" );
 
-                lock (json)
+                lock (_json)
                 {
-                    json += sbJson.ToString(0,sbJson.Length);
+                    _json += sbJson.ToString(0,sbJson.Length);
                 }
                 sm.SetMethod(methods[i]);
-                if(!classMembers.ContainsKey(completeName))
-                        classMembers.Add(completeName, sm);
+                if(!ClassMembers.ContainsKey(completeName))
+                        ClassMembers.Add(completeName, sm);
             } 
         }
     };

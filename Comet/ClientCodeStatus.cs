@@ -19,8 +19,6 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Web;
 
 namespace PokeIn.Comet
 {
@@ -29,11 +27,12 @@ namespace PokeIn.Comet
         public ClientCodeStatus(CometWorker worker)
         {
             Events = new Dictionary<string, BrowserHelper.ClientElementEventReceived>();
-            Online = DateTime.Now;
+            LastSend = DateTime.Now;
+            LastListen = DateTime.Now;
             Worker = worker;
         }
         
-        public DateTime Online;
+        public DateTime LastSend, LastListen;
         public CometWorker Worker;
         public Dictionary<string, BrowserHelper.ClientElementEventReceived> Events; 
     }

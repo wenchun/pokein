@@ -19,37 +19,46 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Web;
 
 namespace PokeIn.Comet
 {
+    /// <summary>
+    /// Definitions of initialized server side class list
+    /// </summary>
     public delegate void DefineClassObjects(string clientId, ref Dictionary<string, object> classList);
 
+    /// <summary>
+    /// Main class to use ajax functionalities
+    /// </summary>
     public class CometWorker
     {
         #region Members
-        static PokeIn.DynamicCode Code = new PokeIn.DynamicCode();
-        static Dictionary<string, CometMessage> Clients = new Dictionary<string, CometMessage>();
-        static Dictionary<string, List<string>> ClientScriptsLog = new Dictionary<string, List<string>>();
+        static DynamicCode _code = new DynamicCode();
+        static Dictionary<string, CometMessage> _clients = new Dictionary<string, CometMessage>();
+        static Dictionary<string, List<string>> _clientScriptsLog = new Dictionary<string, List<string>>();
         public static Dictionary<string, ClientCodeStatus> ClientStatus = new Dictionary<string, ClientCodeStatus>();
-        static long hClientId = 0;
+        static long _hClientId;
+
         #endregion 
 
         #region NewClientId
+        /// <summary>
+        /// Creates a unique client id.
+        /// </summary>
+        /// <value>a unique client id.</value>
         static string NewClientId
         {
             get
             {
-                lock (ClientScriptsLog)
+                lock (_clientScriptsLog)
                 {
-                    if (hClientId == 0)
+                    if (_hClientId == 0)
                     {
-                        hClientId = DateTime.Now.ToFileTime() % 1000;
+                        _hClientId = DateTime.Now.ToFileTime() % 1000;
                     }
 
-                    hClientId++;
-                    string clientId = "C" + (hClientId).ToString(); 
+                    _hClientId++;
+                    string clientId = "C" + (_hClientId).ToString(); 
                     return clientId;
                 }
             }
@@ -57,9 +66,9 @@ namespace PokeIn.Comet
         #endregion
 
         #region UpdateUserTime
-        static bool UpdateUserTime(string clientId, DateTime date)
+        static bool UpdateUserTime(string clientId, DateTime date, bool isSend)
         {
-            bool hasClient = false;
+            bool hasClient;
 
             lock (ClientStatus)
             {
@@ -70,7 +79,10 @@ namespace PokeIn.Comet
             {
                 lock (ClientStatus[clientId])
                 {
-                    ClientStatus[clientId].Online = date;
+                    if(isSend)
+                        ClientStatus[clientId].LastSend = date;
+                    else
+                        ClientStatus[clientId].LastListen = date;
                 }
             }
 
@@ -79,23 +91,50 @@ namespace PokeIn.Comet
         #endregion
 
         #region Binds
+        /// <summary>
+        /// Binds the specified handler URL.
+        /// </summary>
+        /// <param name="handlerUrl">The handler URL</param>
+        /// <param name="page">Page object</param>
+        /// <param name="classDefs">Class definition handler</param>
+        /// <param name="clientId">The client id</param>
+        /// <returns></returns>
         public static bool Bind(string handlerUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId)
         {
             return Bind(handlerUrl, handlerUrl, page, classDefs, out clientId, true);
         }
 
+        /// <summary>
+        /// Binds the specified listen URL.
+        /// </summary>
+        /// <param name="listenUrl">The listen URL.</param>
+        /// <param name="sendUrl">The send URL.</param>
+        /// <param name="page">Page object</param>
+        /// <param name="classDefs">Class definition handler</param>
+        /// <param name="clientId">The client id</param>
+        /// <returns></returns>
         public static bool Bind(string listenUrl, string sendUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId)
         {
             return Bind(listenUrl, sendUrl, page, classDefs, out clientId, true); 
         }
-         
-        public static bool Bind(string listenUrl, string sendUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId, bool CometEnabled)
+
+        /// <summary>
+        /// Binds the specified listen URL.
+        /// </summary>
+        /// <param name="listenUrl">The listen URL.</param>
+        /// <param name="sendUrl">The send URL.</param>
+        /// <param name="page">Page object</param>
+        /// <param name="classDefs">Class definition handler</param>
+        /// <param name="clientId">The client id</param>
+        /// <param name="cometEnabled">if set to <c>true</c> [comet enabled].</param>
+        /// <returns></returns>
+        public static bool Bind(string listenUrl, string sendUrl, System.Web.UI.Page page, DefineClassObjects classDefs, out string clientId, bool cometEnabled)
         {  
             clientId = NewClientId; 
 
-            lock (Clients)
+            lock (_clients)
             {
-                Clients.Add(clientId, new CometMessage(clientId));
+                _clients.Add(clientId, new CometMessage());
             }
 
             Dictionary<string, object> classList = new Dictionary<string, object>();
@@ -103,12 +142,12 @@ namespace PokeIn.Comet
 
             bool anyAdd = false;
 
-            lock (PokeIn.DynamicCode.Definitions)
+            lock (DynamicCode.Definitions)
             {
                 foreach (KeyValuePair<string, object> en in classList)
                 {
                     object ba = en.Value;
-                    PokeIn.DynamicCode.Definitions.Add(en.Key, ref ba, clientId);
+                    DynamicCode.Definitions.Add(en.Key, ref ba, clientId);
                     anyAdd = true;
                 }
                 object brO = new BrowserEvents(clientId);
@@ -127,7 +166,7 @@ namespace PokeIn.Comet
                 return false;
             } 
 
-            JWriter.WriteClientScript(ref page, clientId, listenUrl, sendUrl, CometEnabled); 
+            JWriter.WriteClientScript(ref page, clientId, listenUrl, sendUrl, cometEnabled); 
 
             CometWorker worker = new CometWorker(clientId);
 
@@ -137,12 +176,12 @@ namespace PokeIn.Comet
 
                 //Oguz Bastemur
                 //to-do::smart threads through the core units
-                if (CometEnabled)
+                if (cometEnabled)
                 {
-                    System.Threading.ThreadStart Ts = new System.Threading.ThreadStart(ClientStatus[clientId].Worker.ClientThread);
-                    ClientStatus[clientId].Worker._Thread = new System.Threading.Thread(Ts);
-                    ClientStatus[clientId].Worker._Thread.SetApartmentState(System.Threading.ApartmentState.MTA);
-                    ClientStatus[clientId].Worker._Thread.Start();
+                    System.Threading.ThreadStart ts = new System.Threading.ThreadStart(ClientStatus[clientId].Worker.ClientThread);
+                    ClientStatus[clientId].Worker._thread = new System.Threading.Thread(ts);
+                    ClientStatus[clientId].Worker._thread.SetApartmentState(System.Threading.ApartmentState.MTA);
+                    ClientStatus[clientId].Worker._thread.Start();
                 }
             } 
              
@@ -152,75 +191,92 @@ namespace PokeIn.Comet
 
         #region non-static
 
-        string ClientId;
+        string _clientId;
 
-        System.Threading.Thread _Thread;
+        System.Threading.Thread _thread;
 
-        CometWorker(string clientId) { ClientId = clientId; CodesToRun = new List<string>(); }
+        CometWorker(string clientId) { _clientId = clientId; _codesToRun = new List<string>(); }
 
-        List<string> CodesToRun;
+        List<string> _codesToRun;
 
         void ClientThread()
         {
             int roundCounter = 1;
             int totalWait = 0;
-            bool hasClient = false;
+            bool hasClient;
             lock (ClientStatus)
             {
-                hasClient = ClientStatus.ContainsKey(ClientId);
+                hasClient = ClientStatus.ContainsKey(_clientId);
             }
 
             try
             {
                 while (hasClient)
                 {
-                    int record_count = 0;
-                    lock (CodesToRun)
+                    int recordCount;
+                    lock (_codesToRun)
                     {
-                        record_count = CodesToRun.Count;
+                        recordCount = _codesToRun.Count;
                     }
-                    if (record_count == 0)
+                    if (recordCount == 0)
                     {
-                        int _timer = 30 + ((roundCounter / 100) * 15);
-                        totalWait += _timer;
-                        System.Threading.Thread.Sleep(_timer);
-                        roundCounter++;
+                        int timer = 30 + ((roundCounter / 100) * 15);
+                        totalWait += timer;
+                        System.Threading.Thread.Sleep(timer);
+                        roundCounter++; 
 
-                        if (totalWait > CometSettings.ClientTimeout)
+                        if (roundCounter % 30 == 0)
                         {
-                            SendToClient(ClientId, "PokeIn.Closed();");
-                            break;
-                        }
-                        if (roundCounter % 60 == 0)
-                        {
-                            hasClient = false;
                             lock (ClientStatus)
                             {
-                                hasClient = ClientStatus.ContainsKey(ClientId);
+                                hasClient = ClientStatus.ContainsKey(_clientId);
                             }
                             if (hasClient)
                             {
-                                lock (ClientStatus[ClientId])
+                                lock (ClientStatus[_clientId])
                                 {
-                                    if (ClientStatus[ClientId].Online < DateTime.Now.AddMilliseconds(-1 * CometSettings.ConnectionLostTimeout))
+                                    if ( (DateTime.Now - ClientStatus[_clientId].LastListen).TotalMilliseconds > CometSettings.ConnectionLostTimeout)
                                     {
                                         hasClient = false;
-                                        SendToClient(ClientId, "PokeIn.Closed();");
+                                        SendToClient(_clientId, "PokeIn.Closed();");
+                                        break;
+                                    }
+                                }
+                            }
+                            if (CometSettings.ClientTimeout == 0)
+                                continue; 
+                            if (hasClient)
+                            {
+                                lock (ClientStatus[_clientId])
+                                {
+                                    if ((DateTime.Now - ClientStatus[_clientId].LastSend).TotalMilliseconds > CometSettings.ClientTimeout)
+                                    {
+                                        hasClient = false;
+                                        SendToClient(_clientId, "PokeIn.Closed();");
                                         break;
                                     }
                                 }
                             }
                         }
+
+                        if (CometSettings.ClientTimeout == 0)
+                            continue; 
+
+                        if (totalWait > CometSettings.ClientTimeout)
+                        {
+                            SendToClient(_clientId, "PokeIn.Closed();");
+                            break;
+                        } 
                     }
                     else
                     {
                         totalWait = 0;
                         roundCounter = 1;
-                        ExecuteJobs(ClientId);
+                        ExecuteJobs(_clientId);
                     }
                 }
             }
-            catch (Exception)
+            catch
             {
                 hasClient = false;
             }
@@ -228,42 +284,41 @@ namespace PokeIn.Comet
             try
             {
                 if (totalWait > CometSettings.ClientTimeout || !hasClient)
-                    RemoveClient(ClientId);
+                    RemoveClient(_clientId);
             }
-            catch (System.Exception)
-            {
-            }
+            catch{}
         }
 
-        void ExecuteJobs(string ClientId)
+        void ExecuteJobs(string clientId)
         {
             string code = "";
-            int record_count = 0;
-            lock (CodesToRun)
+            lock (_codesToRun)
             {
-                record_count = CodesToRun.Count;
+                int recordCount = _codesToRun.Count;
 
-                for (int i = 0; i < record_count; i++)
+                for (int i = 0; i < recordCount; i++)
                 {
                     if (i != 0)
                     {
                         code += "\r";
                     }
-                    code += CodesToRun[i];
+                    code += _codesToRun[i];
                 }
-                CodesToRun.Clear();
+                _codesToRun.Clear();
             }
-            if (code.Length > 0)
+            if (code.Length <= 0) return;
+            if (!_code.Run(code))
             {
-                if (!Code.Run(code))
-                {
-                    SendToClient(ClientId, "PokeIn.CompilerError('" + CometWorker.Code.ErrorMessage +"');");
-                }
+                SendToClient(clientId, "PokeIn.CompilerError('" + _code.ErrorMessage +"');");
             }
         }
         #endregion 
 
         #region Handlers
+        /// <summary>
+        /// Handles the specified page.
+        /// </summary>
+        /// <param name="page">Page object</param>
         public static void Handle(System.Web.UI.Page page)
         {
             if (!page.Request.Params.HasKeys())
@@ -280,6 +335,10 @@ namespace PokeIn.Comet
             } 
         }
 
+        /// <summary>
+        /// Sends through the specified page object.
+        /// </summary>
+        /// <param name="page">Page object</param>
         public static void Send(System.Web.UI.Page page)
         {
             if (!page.Request.Params.HasKeys())
@@ -303,10 +362,10 @@ namespace PokeIn.Comet
                 return;
             }
 
-            bool is_secure = true;
+            bool isSecure = true;
             if (page.Request.Params["sc"] != null)
             {
-                bool.TryParse(page.Request.Params["sc"], out is_secure);
+                bool.TryParse(page.Request.Params["sc"], out isSecure);
             }
 
             bool cometEnabled = true; 
@@ -321,29 +380,29 @@ namespace PokeIn.Comet
                 ijStatus = page.Request.Params["ij"].ToString() == "1";
             } 
 
-            message = JWriter.CreateText(clientId, message, true, is_secure);
+            message = JWriter.CreateText(clientId, message, true, isSecure);
 
             if (CometSettings.LogClientScripts)
             {
-                lock (ClientScriptsLog)
+                lock (_clientScriptsLog)
                 {
-                    if (!ClientScriptsLog.ContainsKey(clientId))
+                    if (!_clientScriptsLog.ContainsKey(clientId))
                     {
-                        ClientScriptsLog.Add(clientId, new List<string>());
+                        _clientScriptsLog.Add(clientId, new List<string>());
                     }
                 }
-                lock(ClientScriptsLog[clientId])
+                lock(_clientScriptsLog[clientId])
                 {
-                    ClientScriptsLog[clientId].Add(message);
+                    _clientScriptsLog[clientId].Add(message);
                 }
             } 
 
-            if ( UpdateUserTime(clientId, DateTime.Now) )
+            if ( UpdateUserTime(clientId, DateTime.Now, true) )
             { 
                 if (message.Trim().StartsWith(clientId + ".CometBase.Close();"))
                 {
                     RemoveClient(clientId);
-                    message = JWriter.CreateText(clientId, "PokeIn.Closed();", false, is_secure);
+                    message = JWriter.CreateText(clientId, "PokeIn.Closed();", false, isSecure);
                     if (ijStatus)
                         message = "PokeIn.CreateText('" + message + "',true);";
                     page.Response.Write(message);
@@ -355,24 +414,24 @@ namespace PokeIn.Comet
                         if (ClientStatus[clientId].Worker == null)
                         {
                             RemoveClient(clientId);
-                            message = JWriter.CreateText(clientId, "PokeIn.Closed();", false, is_secure);
+                            message = JWriter.CreateText(clientId, "PokeIn.Closed();", false, isSecure);
                             page.Response.Write(message);
                             return;
                         }
 
-                        ClientStatus[clientId].Worker.CodesToRun.Add(message); 
+                        ClientStatus[clientId].Worker._codesToRun.Add(message); 
                         if (!cometEnabled)
                         {
                             ClientStatus[clientId].Worker.ExecuteJobs(clientId);
                         }
                     }
 
-                    string messages = "";
+                    string messages;
                     if (GrabClientMessages(clientId, out messages))
                     {
                         if (messages.Length > 0)
                         {
-                            message = JWriter.CreateText(clientId, messages, false, is_secure);
+                            message = JWriter.CreateText(clientId, messages, false, isSecure);
                             if (ijStatus)
                                 message = "PokeIn.CreateText('" + message.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r") + "',true);";
                             else
@@ -383,7 +442,7 @@ namespace PokeIn.Comet
                     else if (messages == null)
                     {
                         RemoveClient(clientId);
-                        message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, is_secure);
+                        message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, isSecure);
                         if (ijStatus)
                             message = "PokeIn.CreateText('" + message + "',true);";
                         page.Response.Write(message);
@@ -401,13 +460,17 @@ namespace PokeIn.Comet
             else
             {
                 RemoveClient(clientId);
-                message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, is_secure);
+                message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, isSecure);
                 if (ijStatus)
                     message = "PokeIn.CreateText('" + message + "',true);";
                 page.Response.Write(message);
             } 
-        }
+        } 
 
+        /// <summary>
+        /// Listens through the specified page object.
+        /// </summary>
+        /// <param name="page">Page object</param>
         public static void Listen(System.Web.UI.Page page)
         {
             if (!page.Request.Params.HasKeys())
@@ -419,14 +482,13 @@ namespace PokeIn.Comet
             {
                 return;
             }
-            page.AsyncTimeout = new TimeSpan(0, 0, CometSettings.ConnectionLostTimeout / 1000); 
 
             DateTime pageStart = DateTime.Now.AddMilliseconds(CometSettings.ListenerTimeout);
 
-            bool is_secure = true;
+            bool isSecure = true;
             if (page.Request.Params["sc"] != null)
             {
-                bool.TryParse(page.Request.Params["sc"], out is_secure);
+                bool.TryParse(page.Request.Params["sc"], out isSecure);
             }
 
             bool ijStatus = false;
@@ -435,20 +497,22 @@ namespace PokeIn.Comet
                 ijStatus = page.Request.Params["ij"].ToString() == "1";
             }
 
-            UpdateUserTime(clientId, DateTime.Now);
+            UpdateUserTime(clientId, pageStart, false);
 
-            string message = "";
-            int clientTester = 0; 
+            string message;
+            int clientTester = 0;
+ 
+            page.Response.Buffer = false;
 
             while (true)
             {
-                string messages = "";
+                string messages;
                 if (GrabClientMessages(clientId, out messages))
                 {
                     if (messages.Length > 0)
                     {
                         message = messages + "PokeIn.Listen();";
-                        message = JWriter.CreateText(clientId, message, false, is_secure);
+                        message = JWriter.CreateText(clientId, message, false, isSecure);
 
                         if (ijStatus)
                             message = "PokeIn.CreateText('" + message.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r") + "',true);";
@@ -460,17 +524,16 @@ namespace PokeIn.Comet
                     }
                 }
 
-                if (clientTester % 40 == 0)
+                if (clientTester % 25 == 0)
                 {
                     page.Response.Write(" ");
-                    page.Response.Flush();
                 }
                 clientTester++;
                 
                 if (messages == null || !page.Response.IsClientConnected)
                 {
                     RemoveClient(clientId);
-                    message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, is_secure);
+                    message = JWriter.CreateText(clientId, "PokeIn.ClientObjectsDoesntExist();PokeIn.Closed();", false, isSecure);
                     if(ijStatus)
                         message = "PokeIn.CreateText('" + message + "',true);";
                     page.Response.Write(message); 
@@ -479,7 +542,7 @@ namespace PokeIn.Comet
 
                 if (pageStart < DateTime.Now)
                 {
-                    message = JWriter.CreateText(clientId, "PokeIn.Listen();", false, is_secure);
+                    message = JWriter.CreateText(clientId, "PokeIn.Listen();", false, isSecure);
                     if (ijStatus)
                         message = "PokeIn.CreateText('" + message + "',true);";
                     page.Response.Write(message); 
@@ -488,34 +551,41 @@ namespace PokeIn.Comet
                 System.Threading.Thread.Sleep(50);
             }
 
-            UpdateUserTime(clientId, DateTime.Now.AddMilliseconds(-1 * (CometSettings.ListenerTimeout)));
+            UpdateUserTime(clientId, DateTime.Now, false);
         }
         #endregion 
 
         #region SendToClient
+        /// <summary>
+        /// Sends message to client.
+        /// </summary>
+        /// <param name="clientId">The client id.</param>
+        /// <param name="message">The message.</param>
         public static void SendToClient(string clientId, string message)
         {
-            bool hasClient = false;
+            bool hasClient;
 
             lock (ClientStatus)
             {
                 hasClient = ClientStatus.ContainsKey(clientId);
             }
 
-            if (hasClient)
+            if (!hasClient) return;
+            lock (_clients[clientId])
             {
-                lock (Clients[clientId])
-                {
-                    Clients[clientId].PushMessage(message);
-                }
+                _clients[clientId].PushMessage(message);
             }
         }
         #endregion
 
         #region SendToAll
+        /// <summary>
+        /// Sends message to all.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public static void SendToAll(string message)
         {
-            foreach (string clientId in Clients.Keys)
+            foreach (string clientId in _clients.Keys)
             {
                 SendToClient(clientId, message);
             }
@@ -523,19 +593,28 @@ namespace PokeIn.Comet
         #endregion
 
         #region GetClientIds
+        /// <summary>
+        /// Gets the active client ids.
+        /// </summary>
+        /// <returns></returns>
         public static string[] GetClientIds()
         {
-            string[] clientIds = null;
-            lock (Clients)
+            string[] clientIds;
+            lock (_clients)
             {
-               clientIds = new string[Clients.Keys.Count];
-               Clients.Keys.CopyTo(clientIds, 0);
+               clientIds = new string[_clients.Keys.Count];
+               _clients.Keys.CopyTo(clientIds, 0);
             }
             return clientIds;
         }
         #endregion
 
         #region SendToClients
+        /// <summary>
+        /// Sends message to multiple clients.
+        /// </summary>
+        /// <param name="clientIds">The client ids.</param>
+        /// <param name="message">The message.</param>
         public static void SendToClients(string[] clientIds, string message)
         {
             for (int i = 0, lmt = clientIds.Length; i < lmt; i++)
@@ -548,7 +627,7 @@ namespace PokeIn.Comet
         #region GrabClientMessages
         static bool GrabClientMessages(string clientId, out string message)
         {
-            bool hasClient = false;
+            bool hasClient;
 
             lock (ClientStatus)
             {
@@ -559,14 +638,13 @@ namespace PokeIn.Comet
             {
                 try
                 {
-                    lock (Clients[clientId])
+                    lock (_clients[clientId])
                     {
-                        message = "";
-                        Clients[clientId].PullMessages(out message);
+                        _clients[clientId].PullMessages(out message);
                     }
                     return true;
                 }
-                catch (Exception) { }//Thread Differences
+                catch{ }//Thread Differences
             } 
             message = null;
             return false;
@@ -574,61 +652,64 @@ namespace PokeIn.Comet
         #endregion
 
         #region RemoveClient
+        /// <summary>
+        /// Removes the client.
+        /// </summary>
+        /// <param name="clientId">The client id.</param>
         public static void RemoveClient(string clientId)
         {
-            bool hasClient = false;
+            bool hasClient;
+
+            System.Threading.Thread duplicate = null;
 
             lock (ClientStatus)
             {
-                hasClient = ClientStatus.ContainsKey(clientId); 
+                hasClient = ClientStatus.ContainsKey(clientId);
 
                 if (hasClient)
-                {
-
+                { 
                     try
                     {
-                        ClientStatus[clientId].Worker._Thread.Abort();
+                        ClientStatus[clientId].Worker._codesToRun.Clear();
                     }
-                    catch (Exception) { }
-                    try
-                    {
-                        ClientStatus[clientId].Worker.CodesToRun.Clear();
-                    }
-                    catch (Exception) { }
+                    catch{ }
                     try
                     {
                         ClientStatus[clientId].Events.Clear();
                     }
-                    catch (Exception) { }
+                    catch{ }
+
+                    duplicate = ClientStatus[clientId].Worker._thread;
+
                     try
                     {
                         ClientStatus[clientId].Worker = null;
                     }
-                    catch (Exception) { }
+                    catch{ }
 
-                    ClientStatus.Remove(clientId);
+                    ClientStatus.Remove(clientId); 
                 }
             }
 
-            bool inClients = false;
-            lock (Clients)
+            bool inClients;
+            lock (_clients)
             {
-                inClients = Clients.ContainsKey(clientId);
+                inClients = _clients.ContainsKey(clientId);
                 if (inClients)
                 {
-                    Clients.Remove(clientId);
+                    _clients.Remove(clientId);
                 }
             }
 
             if (inClients && hasClient)
             {
-                lock (PokeIn.DynamicCode.Definitions.definedClasses)
+                lock (DynamicCode.Definitions.DefinedClasses)
                 {
                     List<string> lstKeys = new List<string>();
-                    lock (PokeIn.DynamicCode.Definitions)
+                    lock (DynamicCode.Definitions)
                     {
-                        PokeIn.DynamicCode.Definitions.definedClasses.Remove(clientId);
-                        foreach (string key in PokeIn.DynamicCode.Definitions.classObjects.Keys)
+                        DynamicCode.Definitions.DefinedClasses.Remove(clientId);
+                        foreach (string key in DynamicCode.Definitions.ClassObjects.Keys)
                         {
                             if (key.StartsWith(clientId + "."))
                             {
@@ -636,7 +717,7 @@ namespace PokeIn.Comet
                             }
                         }
                         foreach (string key in lstKeys)
-                            PokeIn.DynamicCode.Definitions.classObjects.Remove(key);
+                            DynamicCode.Definitions.ClassObjects.Remove(key);
 
                         GC.Collect();
                         GC.WaitForPendingFinalizers();
@@ -645,29 +726,46 @@ namespace PokeIn.Comet
                     lstKeys.Clear();
                 }
             }
+
+            try
+            {
+                if (duplicate != null)
+                {
+                    duplicate.Abort();
+                }
+            }
+            catch { }
         }
         #endregion
 
         #region ClientLog
+        /// <summary>
+        /// Container for client logs
+        /// </summary>
         public class ClientLog
         {
+            /// <summary>
+            /// Gets the client script log.
+            /// </summary>
+            /// <param name="clientId">The client id.</param>
+            /// <returns></returns>
             public static string[] GetClientScriptLog(string clientId)
             {
                 string[] arrLog = null;
                 if(CometSettings.LogClientScripts)
                 {
-                    bool hasClient = false;
+                    bool hasClient;
 
-                    lock (CometWorker.ClientScriptsLog)
+                    lock (_clientScriptsLog)
                     {
-                        hasClient = CometWorker.ClientScriptsLog.ContainsKey(clientId);
+                        hasClient = _clientScriptsLog.ContainsKey(clientId);
                     }
 
                     if (hasClient)
                     {
-                        lock (CometWorker.ClientScriptsLog[clientId])
+                        lock (_clientScriptsLog[clientId])
                         {
-                            arrLog = CometWorker.ClientScriptsLog[clientId].ToArray();
+                            arrLog = _clientScriptsLog[clientId].ToArray();
                         }
                     }
                 }
@@ -675,24 +773,24 @@ namespace PokeIn.Comet
                 return arrLog;
             }
 
+            /// <summary>
+            /// Clears the client script log.
+            /// </summary>
+            /// <param name="clientId">The client id.</param>
             public static void ClearClientScriptLog(string clientId)
             {
-                if(CometSettings.LogClientScripts)
+                if (!CometSettings.LogClientScripts) return;
+                bool hasClient;
+
+                lock (_clientScriptsLog)
                 {
-                    bool hasClient = false;
+                    hasClient = _clientScriptsLog.ContainsKey(clientId);
+                }
 
-                    lock (CometWorker.ClientScriptsLog)
-                    {
-                        hasClient = CometWorker.ClientScriptsLog.ContainsKey(clientId);
-                    }
-
-                    if (hasClient)
-                    {
-                        lock (CometWorker.ClientScriptsLog[clientId])
-                        {
-                            CometWorker.ClientScriptsLog[clientId].Clear();
-                        }
-                    }
+                if (!hasClient) return;
+                lock (_clientScriptsLog[clientId])
+                {
+                    _clientScriptsLog[clientId].Clear();
                 }
             }
         }

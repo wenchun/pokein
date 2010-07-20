@@ -17,43 +17,40 @@
  * PokeIn Comet Library  
  * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Web;
-
 namespace PokeIn.Comet
 {
     internal class JWriter
     {
-        static string Js = "";
-        public static void WriteClientScript(ref System.Web.UI.Page page, string clientId, string listenUrl, string sendUrl, bool CometEnabled = true)
+        static string _js = "";
+        public static void WriteClientScript(ref System.Web.UI.Page page, string clientId, string listenUrl, string sendUrl, bool cometEnabled = true)
         {
-            if (Js.Length == 0)
+            if (_js.Length == 0)
             {
                 System.Reflection.Assembly asm = System.Reflection.Assembly.GetExecutingAssembly();
                 System.IO.Stream stm = asm.GetManifestResourceStream("PokeIn.Comet.PokeIn.js");
-                byte[] bt = new byte[stm.Length];
-                stm.Read(bt, 0, (System.Int32)stm.Length);
-                Js = System.Text.Encoding.UTF8.GetString(bt, 0, (System.Int32)stm.Length);
-                stm.Close();
-                Js = Js.Replace("\r\n", "");  
-                Js = Js.Replace("   ", ""); 
+                if (stm != null)
+                {
+                    byte[] bt = new byte[stm.Length];
+                    stm.Read(bt, 0, (System.Int32)stm.Length);
+                    _js = System.Text.Encoding.UTF8.GetString(bt, 0, (System.Int32)stm.Length);
+                    stm.Close();
+                    _js = _js.Replace("\r\n", "");  
+                    _js = _js.Replace("   ", ""); 
 
-                string[] obfs = new string[] { "_callback_", "_Send", "ListenUrl", "SendUrl", "XMLString", "js_class", "RequestList", "ListenCounter", "RepHelper", "connector", "call_id" };
-                int counter = 0;
-                foreach (string obf in obfs)
-                    Js = Js.Replace(obf, "_"+(counter++).ToString());
-                bt = null;
+                    string[] obfs = new[] { "_callback_", "_Send", "ListenUrl", "SendUrl", "XMLString", "js_class", "RequestList", "ListenCounter", "RepHelper", "connector", "call_id" };
+                    int counter = 0;
+                    foreach (string obf in obfs)
+                        _js = _js.Replace(obf, "_"+(counter++).ToString());
+                }
             }
 
-            string clientJs = Js;
+            string clientJs = _js;
 
             clientJs = clientJs.Replace("[$$ClientId$$]", clientId);
             clientJs = clientJs.Replace("[$$Listen$$]", listenUrl);
             clientJs = clientJs.Replace("[$$Send$$]", sendUrl);
 
-            if (!CometEnabled)
+            if (!cometEnabled)
             {
                 clientJs += "\nPokeIn.CometEnabled = false;";
             }
@@ -62,39 +59,37 @@ namespace PokeIn.Comet
                 clientJs += "\nPokeIn.CometEnabled = true;";
             }
 
-            page.Response.Write("<script>\n" + clientJs + "\n" + PokeIn.DynamicCode.Definitions.JSON + "</script>");
+            page.Response.Write("<script>\n" + clientJs + "\n" + DynamicCode.Definitions.JSON + "</script>");
         }
 
-        public static string CreateText(string clientId, string mess, bool _in, bool is_secure)
+        public static string CreateText(string clientId, string mess, bool @in, bool isSecure)
         {
-            if (is_secure)
-                return CreateText(clientId, mess, _in);
+            if (isSecure)
+                return CreateText(clientId, mess, @in);
+
+            if (@in)
+            {
+                mess = mess.Replace("&quot;", "&");
+                mess = mess.Replace("&#92;", "\\");
+                mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
+            }
             else
             {
-                if (_in)
-                {
-                    mess = mess.Replace("&quot;", "&");
-                    mess = mess.Replace("&#92;", "\\");
-                    mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
-                }
-                else
-                {
-                    mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
-                    mess = mess.Replace("\\", "&#92;");
-                }
-                return mess;
+                mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
+                mess = mess.Replace("\\", "&#92;");
             }
+            return mess;
         }
 
-        static string definitions = ".(){},@? ][{};&\"'#";
-        static string CreateText(string clientId, string mess, bool _in)
+        const string Definitions = ".(){},@? ][{};&\"'#";
+        static string CreateText(string clientId, string mess, bool @in)
         {
             string clide = clientId.Substring(1, clientId.Length - 1);
-            if (_in)
+            if (@in)
             {
-                for (int i = 0, lmt = definitions.Length; i < lmt; i++)
+                for (int i = 0, lmt = Definitions.Length; i < lmt; i++)
                 {
-                    mess = mess.Replace(":" + clide + i.ToString() + ":", definitions[i].ToString());
+                    mess = mess.Replace(":" + clide + i.ToString() + ":", Definitions[i].ToString());
                 }
                 mess = mess.Replace("&quot;", "&");
                 mess = mess.Replace("&#92;", "\\");
@@ -104,9 +99,9 @@ namespace PokeIn.Comet
             {
                 mess = mess.Replace("\n", "\\n").Replace("\r", "\\r");
                 mess = mess.Replace("\\", "&#92;");
-                for (int i = 0, lmt = definitions.Length; i < lmt; i++)
+                for (int i = 0, lmt = Definitions.Length; i < lmt; i++)
                 {
-                    mess = mess.Replace(definitions[i].ToString(), ":" + clide + i.ToString() + ":");
+                    mess = mess.Replace(Definitions[i].ToString(), ":" + clide + i.ToString() + ":");
                 }
             }
             return mess;

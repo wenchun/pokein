@@ -17,36 +17,30 @@
  * PokeIn Comet Library (pokein.codeplex.com)
  * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace PokeIn.Comet
 {
     internal class BrowserEvents
     {
-        string ClientId;
+        string _clientId;
         public BrowserEvents(string clientId)
         {
-            ClientId = clientId;
+            _clientId = clientId;
         }
-        public void Fired(string ElementId, string EventName, string ReturnValue)
+        public void Fired(string elementId, string eventName, string returnValue)
         {
-            string SimpleName = ElementId + "_" + EventName;
+            string simpleName = elementId + "_" + eventName;
 
-            bool hasClient = false;
+            bool hasClient;
             lock (CometWorker.ClientStatus)
             {
-                hasClient = CometWorker.ClientStatus.ContainsKey(ClientId);
+                hasClient = CometWorker.ClientStatus.ContainsKey(_clientId);
             }
-            if (hasClient)
+            if (!hasClient) return;
+            lock (CometWorker.ClientStatus[_clientId])
             {
-                lock (CometWorker.ClientStatus[ClientId])
+                if (CometWorker.ClientStatus[_clientId].Events.ContainsKey(simpleName))
                 {
-                    if (CometWorker.ClientStatus[ClientId].Events.ContainsKey(SimpleName))
-                    {
-                        CometWorker.ClientStatus[ClientId].Events[SimpleName](ClientId, ElementId, EventName, ReturnValue);
-                    }
+                    CometWorker.ClientStatus[_clientId].Events[simpleName](_clientId, elementId, eventName, returnValue);
                 }
             }
         }

@@ -18,39 +18,59 @@
  * Copyright © 2010 Oguz Bastemur http://pokein.codeplex.com (info@pokein.com)
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace PokeIn.Comet
 {
     public class BrowserHelper
     {
-        public delegate void ClientElementEventReceived(string clientId, string ElementId, string EventName, string ReturnValue);
+        /// <summary>
+        /// Delegate definition for Client Element Event Listening
+        /// </summary>
+        public delegate void ClientElementEventReceived(string clientId, string elementId, string eventName, string returnValue);
 
-        public static void RedirectPage(string clientId, string URL)
+        /// <summary>
+        /// Redirects the page.
+        /// </summary>
+        /// <param name="clientId">The client id.</param>
+        /// <param name="url">The URL.</param>
+        public static void RedirectPage(string clientId, string url)
         {
-            Comet.CometWorker.SendToClient(clientId, "PokeIn.Close();\nself.location='" + URL + "';");
-        } 
-
-        public static void SetElementProperty(string clientId, string DomElementId, string PropertyName, string Value)
-        {
-            Comet.CometWorker.SendToClient(clientId, "document.getElementById('" + DomElementId + "')."
-                                                    + PropertyName + "='" + Value + "';");
+            CometWorker.SendToClient(clientId, "PokeIn.Close();\nself.location='" + url + "';");
         }
-        public static void SetElementEvent(string clientId, string ElementId, string EventName, ClientElementEventReceived EventTarget, string ReturnValue)
-        {
-            string fake_id = ElementId.ToLower().Trim();
-            string ObjectType = "document.getElementById('" + ElementId + "')";
-            if (fake_id == "body" || fake_id == "window" || fake_id == "document" || fake_id == "document.body")
-            {
-                if (fake_id == "body")
-                    fake_id = "document.body";
-                ObjectType = fake_id;
-            }
-            string SimpleName = ElementId + "_" + EventName;
 
-            bool hasClient = false;
+        /// <summary>
+        /// Sets a property of a client element
+        /// </summary>
+        /// <param name="clientId">The client id</param>
+        /// <param name="domElementId">The DOM element id</param>
+        /// <param name="propertyName">Name of the property</param>
+        /// <param name="value">Element value</param>
+        public static void SetElementProperty(string clientId, string domElementId, string propertyName, string value)
+        {
+            CometWorker.SendToClient(clientId, "document.getElementById('" + domElementId + "')."
+                                                    + propertyName + "='" + value + "';");
+        }
+
+        /// <summary>
+        /// Sets a server side function target for an event of client element
+        /// </summary>
+        /// <param name="clientId">The client id.</param>
+        /// <param name="elementId">The element id.</param>
+        /// <param name="eventName">Name of the event.</param>
+        /// <param name="eventTarget">The event target.</param>
+        /// <param name="returnValue">The return value.</param>
+        public static void SetElementEvent(string clientId, string elementId, string eventName, ClientElementEventReceived eventTarget, string returnValue)
+        {
+            string fakeId = elementId.ToLower().Trim();
+            string objectType = "document.getElementById('" + elementId + "')";
+            if (fakeId == "body" || fakeId == "window" || fakeId == "document" || fakeId == "document.body")
+            {
+                if (fakeId == "body")
+                    fakeId = "document.body";
+                objectType = fakeId;
+            }
+            string simpleName = elementId + "_" + eventName;
+
+            bool hasClient;
             lock (CometWorker.ClientStatus)
             {
                 hasClient = CometWorker.ClientStatus.ContainsKey(clientId);
@@ -59,25 +79,29 @@ namespace PokeIn.Comet
             {
                 lock (CometWorker.ClientStatus[clientId])
                 {
-                    if (CometWorker.ClientStatus[clientId].Events.ContainsKey(SimpleName))
-                        CometWorker.ClientStatus[clientId].Events.Remove(SimpleName);
-                    CometWorker.ClientStatus[clientId].Events.Add(SimpleName, EventTarget);
+                    if (CometWorker.ClientStatus[clientId].Events.ContainsKey(simpleName))
+                        CometWorker.ClientStatus[clientId].Events.Remove(simpleName);
+                    CometWorker.ClientStatus[clientId].Events.Add(simpleName, eventTarget);
                 }
             }
 
-            if (ReturnValue.Trim().Length == 0)
+            if (returnValue.Trim().Length == 0)
             {
-                ReturnValue = "\"\"";
+                returnValue = "\"\"";
             }
 
-            Comet.CometWorker.SendToClient(clientId, @"
-            document.__" + SimpleName + " = function(ev){PokeIn.Send(PokeIn.GetClientId()+'.BrowserEvents.Fired("  
-                         + ElementId + ","+ EventName + ","+ReturnValue+");'); };function c3eb(){var _item = " 
-                         + ObjectType + "; PokeIn.AddEvent(_item, '" + EventName + "', document.__" 
-                                            + SimpleName + ");}"+"\nc3eb();\n");
+            CometWorker.SendToClient(clientId, @"
+            document.__" + simpleName + " = function(ev){PokeIn.Send(PokeIn.GetClientId()+'.BrowserEvents.Fired("  
+                         + elementId + ","+ eventName + ","+returnValue+");'); };function c3eb(){var _item = " 
+                         + objectType + "; PokeIn.AddEvent(_item, '" + eventName + "', document.__" 
+                                            + simpleName + ");}"+"\nc3eb();\n");
         }
-
-        //deprecated
+         
+        /// <summary>
+        /// Safes the parameter. (Deprecated)
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns></returns>
         public static string SafeParameter(string message)
         {
             return message;
